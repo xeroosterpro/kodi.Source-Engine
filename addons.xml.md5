@@ -1,0 +1,1 @@
+(Get-FileHash addons.xml -Algorithm MD5).Hash.ToLower() | Out-File addons.xml.md5 -NoNewline -Encoding ascii
