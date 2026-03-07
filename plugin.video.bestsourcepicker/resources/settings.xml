@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>  
+<settings>  
+    <category label="Emby Server">  
+        <setting id="emby_url" type="text" label="Server Address" default="" help="The direct web address of your Emby server (e.g., https://yourdomain.com)."/>  
+        <setting id="emby_user" type="text" label="Username" default="" help="Your Emby account username."/>  
+        <setting id="emby_pass" type="text" label="Password" default="" option="hidden" help="Your Emby account password. Used securely to grab an internal API token."/>  
+        <setting id="emby_token" type="text" label="Internal Token" default="" visible="false" help="Hidden system token."/>  
+        <setting id="emby_uid" type="text" label="Internal UID" default="" visible="false" help="Hidden system UID."/>  
+    </category>  
+      
+    <category label="Jellyfin Server">  
+        <setting id="jelly_url" type="text" label="Server Address" default="" help="The direct web address of your Jellyfin server."/>  
+        <setting id="jelly_user" type="text" label="Username" default="" help="Your Jellyfin account username."/>  
+        <setting id="jelly_pass" type="text" label="Password" default="" option="hidden" help="Your Jellyfin account password."/>  
+        <setting id="jelly_token" type="text" label="Internal Token" default="" visible="false" help="Hidden system token."/>  
+        <setting id="jelly_uid" type="text" label="Internal UID" default="" visible="false" help="Hidden system UID."/>  
+    </category>  
+
+    <category label="Smart Presets &amp; Quality">  
+        <setting id="master_preset" type="select" label="Master Scoring Preset" values="Auto Max (Best Overall)|Audiophile (Prioritize Audio)|Resolution (Prioritize 4K)|Remux (Prioritize Size/Bitrate)|1080p Focus (Standard HD)|Custom (Manual Tuning)" default="0" help="Auto Max: Balanced High-End. Audiophile: Focuses on Atmos/TrueHD. Resolution/1080p: Locks video size. Remux: Largest file wins. Custom: Unlocks toggles below."/>  
+        
+        <setting id="custom_sort" type="select" label="[Custom Preset] Primary Metric" values="Highest Bitrate|Largest File Size|None (Features Only)" default="0" help="Decide if the script bases its primary math on the video bitrate or the overall file size."/>  
+        <setting id="custom_4k" type="bool" label="[Custom Preset] Prioritize 4K Resolution" default="true" help="Adds a massive score bonus to files with a 4K/2160p resolution."/>  
+        <setting id="custom_dv" type="bool" label="[Custom Preset] Prioritize Dolby Vision &amp; HDR" default="true" help="Adds a score bonus to files containing Dolby Vision or HDR formats."/>  
+        <setting id="custom_audio" type="bool" label="[Custom Preset] Prioritize Atmos/Lossless Audio" default="true" help="Adds a score bonus to files with TrueHD, DTS-HD MA, or Atmos/DTS:X tracks."/>  
+    </category>  
+      
+    <category label="Limits &amp; Tie-Breakers">  
+        <setting id="max_resolution" type="select" label="Max Resolution Limit" values="No Limit (4K+)|1080p Limit|720p Limit" default="0" help="Prevents the script from picking files larger than this resolution. Excellent for slow internet or older TVs."/>  
+        <setting id="max_size_gb" type="text" label="Max File Size (GB) [0 = No Limit]" default="0" help="Filters out any files larger than this gigabyte size. Leave at 0 for no limit."/>  
+        <setting id="tie_breaker" type="select" label="Server Tie-Breaker Preference" values="None|Emby|Jellyfin" default="0" help="If both servers have identical files with the exact same score, which server wins automatically? If 'None', a menu will pop up."/>  
+    </category>  
+      
+    <category label="Advanced">
+        <setting id="tmdb_api_key" type="text" label="TMDB API Key (optional)" default="" help="Your own TMDB v3 API key. If blank, Source Engine borrows TMDb Helper's key automatically. Get one free at themoviedb.org."/>
+    </category>
+
+    <category label="Notifications">  
+        <setting id="notify_colors" type="select" label="Text Color Theme" values="Default (White)|Matrix (Lime/Red)|Arcade (Cyan/Yellow)|Royal (Gold/Orange)" default="1" help="Changes the color theme of the text inside the notification."/>  
+    </category>  
+</settings>
