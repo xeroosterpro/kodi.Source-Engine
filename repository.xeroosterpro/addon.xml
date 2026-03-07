@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="repository.xeroosterpro"
-       name="XeroosterPro Repository"
+       name="XeroosterPro - Source Engine Pro"
        version="1.0.0"
        provider-name="xeroosterpro">
-  <extension point="xbmc.addon.repository" name="XeroosterPro Repository">
+  <extension point="xbmc.addon.repository" name="XeroosterPro - Source Engine Pro">
     <info compressed="false">
       https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml
     </info>
@@ -15,8 +15,8 @@
     </datadir>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary>XeroosterPro Kodi Repository</summary>
-    <description>Home of Source Engine Pro by XeroosterPro.</description>
+    <summary>XeroosterPro - Source Engine Pro Repository</summary>
+    <description>Official repository for Source Engine Pro by XeroosterPro.</description>
     <platform>all</platform>
   </extension>
 </addon>

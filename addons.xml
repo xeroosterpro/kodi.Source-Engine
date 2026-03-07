@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addons>
-    <addon id="plugin.video.bestsourcepicker" name="Source Engine Pro" version="1.0.0" provider-name="Elias">
+    <addon id="plugin.video.sourceenginepro" name="Source Engine Pro" version="1.0.0" provider-name="XeroosterPro">
         <requires>
             <import addon="xbmc.python" version="3.0.0"/>
             <import addon="script.module.requests" version="2.25.1"/>
@@ -15,14 +15,14 @@
             <platform>all</platform>
         </extension>
     </addon>
-    <addon id="repository.xeroosterpro" name="XeroosterPro Repository" version="1.0.0" provider-name="xeroosterpro">
-        <extension point="xbmc.addon.repository" name="XeroosterPro Repository">
+    <addon id="repository.xeroosterpro" name="XeroosterPro - Source Engine Pro" version="1.0.0" provider-name="xeroosterpro">
+        <extension point="xbmc.addon.repository" name="XeroosterPro - Source Engine Pro">
             <info compressed="false">https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml</info>
             <checksum>https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml.md5</checksum>
             <datadir zip="true">https://xeroosterpro.github.io/kodi.Source-Engine/</datadir>
         </extension>
         <extension point="xbmc.addon.metadata">
-            <summary>XeroosterPro Kodi Repository</summary>
+            <summary>XeroosterPro - Source Engine Pro Repository</summary>
             <platform>all</platform>
         </extension>
     </addon>
