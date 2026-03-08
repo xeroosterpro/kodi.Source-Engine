@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+
+    <category label="General">
+        <setting id="master_preset"  type="select" label="Profile Preset"
+            values="Auto Max (Best Overall)|Audiophile (Prioritize Audio)|Resolution (Prioritize 4K)|Remux (Prioritize Size/Bitrate)|1080p Focus (Standard HD)|Light Mode (Slow Connection / Low-End Device)"
+            default="0"
+            help="Auto Max: balanced best-of-everything. Audiophile: Atmos/TrueHD first. Resolution: 4K above all. Remux: biggest file wins. 1080p Focus: penalises 4K. Light Mode: smallest/lowest-bitrate stream wins — ideal for slow connections or older hardware."/>
+
+        <setting id="tie_breaker"    type="select" label="Server Tie-Breaker Preference"         values="None (Pop-up Choice)|Prefer Emby|Prefer Jellyfin" default="0" help="If both servers score identically, which server wins automatically?"/>
+        <setting id="single_server"  type="bool"   label="Single Server Mode"                    default="false" help="Enable if you only have one server (Emby OR Jellyfin). Disables head-to-head comparison, tie dialogs and the manual picker."/>
+        <setting id="manual_pick"    type="bool"   label="Manually Select Winning Results"       default="false" help="A selection dialog always appears after scoring so you can choose which server to play from. Has no effect when Single Server Mode is on."/>
+
+        <setting id="deep_dive"      type="bool"   label="Deep Dive Searching"                   default="false" help="When ON, the engine casts a massively wider net — more API calls, relaxed name matching, lower confidence thresholds — so virtually nothing on your servers is skipped. Results still go through the full confidence funnel and scoring pipeline. Slower but catches edge-case matches that normal mode would miss. Best left OFF unless you notice missing content."/>
+        <setting id="tmdb_api_key"   type="text"   label="TMDB API Key (optional)"               default="" help="Your own TMDB v3 API key. If blank, Source Engine borrows TMDb Helper's key automatically."/>
+    </category>
+
+    <category label="Emby Server">
+        <setting id="retrieve_emby"  type="action" label="► Auto-fill from EmbyCon"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_emby_settings)"
+            option="close" help="Reads your server address, username and password from EmbyCon and fills them in automatically."/>
+        <setting id="emby_url"       type="text"   label="Server Address"   default="" help="The direct web address of your Emby server (e.g., https://yourdomain.com)."/>
+        <setting id="emby_user"      type="text"   label="Username"          default="" help="Your Emby account username."/>
+        <setting id="emby_pass"      type="text"   label="Password"          default="" option="hidden" help="Your Emby account password. Used to obtain an internal API token on Kodi launch."/>
+        <setting id="test_emby"      type="action" label="⚡ Test Connection"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_emby_token)"
+            option="close" help="Pings your Emby server with the stored token. Shows a progress bar while connecting, then a result notification."/>
+        <setting id="emby_token"     type="text"   label="Internal Token"    default="" visible="false"/>
+        <setting id="emby_uid"       type="text"   label="Internal UID"      default="" visible="false"/>
+
+        <setting type="lsep" label="Backup Server"/>
+        <setting id="retrieve_emby2" type="action" label="► Auto-fill from EmbyCon"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_emby2_settings)"
+            option="close" help="Configure EmbyCon to point at your backup Emby server first, then press this to import those settings here."/>
+        <setting id="emby2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Emby server (e.g., https://emby-backup.example.com). Leave blank to disable failover."/>
+        <setting id="emby2_user"     type="text"   label="Backup Username"        default=""/>
+        <setting id="emby2_pass"     type="text"   label="Backup Password"        default="" option="hidden" help="Password for your backup Emby account."/>
+        <setting id="test_emby2"     type="action" label="⚡ Test Backup Connection"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_emby2_token)"
+            option="close" help="Pings the backup Emby server with its stored token."/>
+        <setting id="emby2_token"    type="text"   label="Backup Internal Token"  default="" visible="false"/>
+        <setting id="emby2_uid"      type="text"   label="Backup Internal UID"    default="" visible="false"/>
+        <setting id="emby_on_backup" type="text"   label="On Backup"              default="false" visible="false"/>
+    </category>
+
+    <category label="Jellyfin Server">
+        <setting id="retrieve_jelly" type="action" label="► Auto-fill from JellyCon"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_jelly_settings)"
+            option="close" help="Reads your server address and username from JellyCon and fills them in automatically."/>
+        <setting id="jelly_url"      type="text"   label="Server Address"   default="" help="The direct web address of your Jellyfin server (e.g., https://yourdomain.com)."/>
+        <setting id="jelly_user"     type="text"   label="Username"          default="" help="Your Jellyfin account username."/>
+        <setting id="jelly_pass"     type="text"   label="Password"          default="" option="hidden" help="Your Jellyfin account password. Used to obtain an internal API token on Kodi launch."/>
+        <setting id="test_jelly"     type="action" label="⚡ Test Connection"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_jelly_token)"
+            option="close" help="Pings your Jellyfin server with the stored token. Shows a progress bar while connecting, then a result notification."/>
+        <setting id="jelly_token"    type="text"   label="Internal Token"    default="" visible="false"/>
+        <setting id="jelly_uid"      type="text"   label="Internal UID"      default="" visible="false"/>
+
+        <setting type="lsep" label="Backup Server"/>
+        <setting id="retrieve_jelly2" type="action" label="► Auto-fill from JellyCon"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_jelly2_settings)"
+            option="close" help="Configure JellyCon to point at your backup Jellyfin server first, then press this to import those settings here."/>
+        <setting id="jelly2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Jellyfin server (e.g., https://jellyfin-backup.example.com). Leave blank to disable failover."/>
+        <setting id="jelly2_user"     type="text"   label="Backup Username"        default=""/>
+        <setting id="jelly2_pass"     type="text"   label="Backup Password"        default="" option="hidden" help="Password for your backup Jellyfin account. Note: JellyCon does not store passwords — only Source Engine Pro uses this for auto-login."/>
+        <setting id="test_jelly2"     type="action" label="⚡ Test Backup Connection"
+            action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_jelly2_token)"
+            option="close" help="Pings the backup Jellyfin server with its stored token."/>
+        <setting id="jelly2_token"    type="text"   label="Backup Internal Token"  default="" visible="false"/>
+        <setting id="jelly2_uid"      type="text"   label="Backup Internal UID"    default="" visible="false"/>
+        <setting id="jelly_on_backup" type="text"   label="On Backup"              default="false" visible="false"/>
+    </category>
+
+    <category label="Limits">
+        <setting id="max_resolution" type="select" label="Max Resolution Limit"              values="No Limit (4K+)|1080p Limit|720p Limit" default="0" help="Prevents picking files above this resolution. Great for slow internet or older TVs."/>
+        <setting id="max_size_gb"    type="text"   label="Max File Size (GB) [0 = No Limit]" default="0"  help="Filters out files larger than this size in GB. Leave 0 for no limit."/>
+    </category>
+
+    <category label="Notifications">
+        <setting id="notify_colors"  type="select" label="Text Color Theme" values="Default (White)|Matrix (Lime/Red)|Arcade (Cyan/Yellow)|Royal (Gold/Orange)" default="1" help="Changes the color theme of the notification text."/>
+    </category>
+
+</settings>
