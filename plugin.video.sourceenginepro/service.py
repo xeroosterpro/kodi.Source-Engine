@@ -82,8 +82,10 @@ def _show_startup_status():
             url = addon.getSetting(f'{prefix}_url').strip()
             if not url:
                 continue
-            token = addon.getSetting(f'{prefix}_token').strip()
-            parts.append(f"{name} {'✓' if token else '✗'}")
+            on_backup = addon.getSetting(f'{prefix}_on_backup') == 'true'
+            display_name = f"{name} (Backup)" if on_backup else name
+            token = addon.getSetting(f'{prefix}2_token' if on_backup else f'{prefix}_token').strip()
+            parts.append(f"{display_name} {'[OK]' if token else '[FAIL]'}")
         if parts:
             xbmcgui.Dialog().notification(
                 "Source Engine Pro",
@@ -104,7 +106,7 @@ def _restore_primary(addon, prefix, name, url, user, pw, dialog):
     xbmc.log(f"Source Engine Pro [BACKUP]: {name} primary restored — switching back from backup.", xbmc.LOGINFO)
     dialog.notification(
         "Source Engine Pro",
-        f"{name} PRIMARY restored ✓",
+        f"{name} PRIMARY restored [OK]",
         xbmcgui.NOTIFICATION_INFO, 5000
     )
 
@@ -123,13 +125,33 @@ def run_automation():
         old_token = addon.getSetting(f'{prefix}_token')
 
         # ── Backup server settings ───────────────────────────────────────
-        backup_url  = addon.getSetting(f'{prefix}2_url')
-        backup_user = addon.getSetting(f'{prefix}2_user')
-        backup_pw   = addon.getSetting(f'{prefix}2_pass')
-        on_backup   = addon.getSetting(f'{prefix}_on_backup') == 'true'
+        backup_url     = addon.getSetting(f'{prefix}2_url')
+        backup_user    = addon.getSetting(f'{prefix}2_user')
+        backup_pw      = addon.getSetting(f'{prefix}2_pass')
+        on_backup      = addon.getSetting(f'{prefix}_on_backup') == 'true'
+        prefer_backup  = addon.getSetting(f'{prefix}_prefer_backup') == 'true'
 
         if url and user:
             clean_url = url.rstrip('/')
+
+            # ── Prefer backup: skip primary entirely ──────────────────────
+            if prefer_backup and backup_url and backup_user:
+                clean_backup = backup_url.rstrip('/')
+                backup_old_token = addon.getSetting(f'{prefix}2_token')
+                if not check_token_health(clean_backup, backup_old_token):
+                    token2, uid2 = get_auth_token(clean_backup, backup_user, backup_pw, f"{name} Backup")
+                    if token2:
+                        addon.setSetting(f'{prefix}2_token', token2)
+                        addon.setSetting(f'{prefix}2_uid', str(uid2) if uid2 else '')
+                if not on_backup:
+                    addon.setSetting(f'{prefix}_on_backup', 'true')
+                    if prefix == 'emby':
+                        _write_to_embycon(clean_backup, backup_user, backup_pw)
+                    else:
+                        _write_to_jellycon(clean_backup, backup_user)
+                    xbmc.log(f"Source Engine Pro [BACKUP]: {name} prefer_backup enabled — routing to backup server.", xbmc.LOGINFO)
+                window.clearProperty(f"SourceEngine_{prefix}_error")
+                continue
 
             # ── Primary server health check / login ───────────────────────
             if check_token_health(clean_url, old_token):

@@ -16,20 +16,20 @@
     </category>
 
     <category label="Emby Server">
-        <setting id="retrieve_emby"  type="action" label="► Auto-fill from EmbyCon"
+        <setting id="retrieve_emby"  type="action" label="Auto-fill from EmbyCon"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_emby_settings)"
             option="close" help="Reads your server address, username and password from EmbyCon and fills them in automatically."/>
         <setting id="emby_url"       type="text"   label="Server Address"   default="" help="The direct web address of your Emby server (e.g., https://yourdomain.com)."/>
         <setting id="emby_user"      type="text"   label="Username"          default="" help="Your Emby account username."/>
         <setting id="emby_pass"      type="text"   label="Password"          default="" option="hidden" help="Your Emby account password. Used to obtain an internal API token on Kodi launch."/>
-        <setting id="test_emby"      type="action" label="⚡ Test Connection"
+        <setting id="test_emby"      type="action" label="Test Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_emby_token)"
             option="close" help="Pings your Emby server with the stored token. Shows a progress bar while connecting, then a result notification."/>
         <setting id="emby_token"     type="text"   label="Internal Token"    default="" visible="false"/>
         <setting id="emby_uid"       type="text"   label="Internal UID"      default="" visible="false"/>
 
         <setting type="lsep" label="Backup Server"/>
-        <setting id="retrieve_emby2" type="action" label="► Auto-fill from EmbyCon"
+        <setting id="retrieve_emby2" type="action" label="Auto-fill from EmbyCon"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_emby2_settings)"
             option="close" help="Configure EmbyCon to point at your backup Emby server first, then press this to import those settings here."/>
         <setting id="emby2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Emby server (e.g., https://emby-backup.example.com). Leave blank to disable failover."/>
@@ -38,26 +38,27 @@
         <setting id="test_emby2"     type="action" label="⚡ Test Backup Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_emby2_token)"
             option="close" help="Pings the backup Emby server with its stored token."/>
-        <setting id="emby2_token"    type="text"   label="Backup Internal Token"  default="" visible="false"/>
-        <setting id="emby2_uid"      type="text"   label="Backup Internal UID"    default="" visible="false"/>
-        <setting id="emby_on_backup" type="text"   label="On Backup"              default="false" visible="false"/>
+        <setting id="emby2_token"        type="text"   label="Backup Internal Token"  default="" visible="false"/>
+        <setting id="emby2_uid"          type="text"   label="Backup Internal UID"    default="" visible="false"/>
+        <setting id="emby_on_backup"     type="text"   label="On Backup"              default="false" visible="false"/>
+        <setting id="emby_prefer_backup" type="bool"   label="Prefer Backup Server"   default="false" help="When enabled, always uses the backup Emby server instead of the primary, even if the primary is reachable."/>
     </category>
 
     <category label="Jellyfin Server">
-        <setting id="retrieve_jelly" type="action" label="► Auto-fill from JellyCon"
+        <setting id="retrieve_jelly" type="action" label="Auto-fill from JellyCon"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_jelly_settings)"
             option="close" help="Reads your server address and username from JellyCon and fills them in automatically."/>
         <setting id="jelly_url"      type="text"   label="Server Address"   default="" help="The direct web address of your Jellyfin server (e.g., https://yourdomain.com)."/>
         <setting id="jelly_user"     type="text"   label="Username"          default="" help="Your Jellyfin account username."/>
         <setting id="jelly_pass"     type="text"   label="Password"          default="" option="hidden" help="Your Jellyfin account password. Used to obtain an internal API token on Kodi launch."/>
-        <setting id="test_jelly"     type="action" label="⚡ Test Connection"
+        <setting id="test_jelly"     type="action" label="Test Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_jelly_token)"
             option="close" help="Pings your Jellyfin server with the stored token. Shows a progress bar while connecting, then a result notification."/>
         <setting id="jelly_token"    type="text"   label="Internal Token"    default="" visible="false"/>
         <setting id="jelly_uid"      type="text"   label="Internal UID"      default="" visible="false"/>
 
         <setting type="lsep" label="Backup Server"/>
-        <setting id="retrieve_jelly2" type="action" label="► Auto-fill from JellyCon"
+        <setting id="retrieve_jelly2" type="action" label="Auto-fill from JellyCon"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_jelly2_settings)"
             option="close" help="Configure JellyCon to point at your backup Jellyfin server first, then press this to import those settings here."/>
         <setting id="jelly2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Jellyfin server (e.g., https://jellyfin-backup.example.com). Leave blank to disable failover."/>
@@ -66,9 +67,10 @@
         <setting id="test_jelly2"     type="action" label="⚡ Test Backup Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_jelly2_token)"
             option="close" help="Pings the backup Jellyfin server with its stored token."/>
-        <setting id="jelly2_token"    type="text"   label="Backup Internal Token"  default="" visible="false"/>
-        <setting id="jelly2_uid"      type="text"   label="Backup Internal UID"    default="" visible="false"/>
-        <setting id="jelly_on_backup" type="text"   label="On Backup"              default="false" visible="false"/>
+        <setting id="jelly2_token"        type="text"   label="Backup Internal Token"  default="" visible="false"/>
+        <setting id="jelly2_uid"         type="text"   label="Backup Internal UID"    default="" visible="false"/>
+        <setting id="jelly_on_backup"    type="text"   label="On Backup"              default="false" visible="false"/>
+        <setting id="jelly_prefer_backup" type="bool"  label="Prefer Backup Server"   default="false" help="When enabled, always uses the backup Jellyfin server instead of the primary, even if the primary is reachable."/>
     </category>
 
     <category label="Limits">

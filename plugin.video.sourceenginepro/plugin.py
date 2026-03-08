@@ -298,7 +298,7 @@ def _run_token_test(label, url, token, uid=None):
             progress.close()
             name_str = f"  —  logged in as: {user_name}" if user_name else ""
             xbmcgui.Dialog().notification(
-                f'{label} ✓  Token Valid',
+                f'{label} [OK]  Token Valid',
                 f"Connected{name_str}",
                 xbmcgui.NOTIFICATION_INFO, 6000
             )
@@ -307,7 +307,7 @@ def _run_token_test(label, url, token, uid=None):
         elif r.status_code == 401:
             progress.close()
             xbmcgui.Dialog().notification(
-                f'{label} ✗  Token Invalid',
+                f'{label} [FAIL]  Token Invalid',
                 'Auth refused.  Re-enter password in settings and restart Kodi.',
                 xbmcgui.NOTIFICATION_ERROR, 6000
             )
@@ -316,7 +316,7 @@ def _run_token_test(label, url, token, uid=None):
         else:
             progress.close()
             xbmcgui.Dialog().notification(
-                f'{label} ✗  Server Error',
+                f'{label} [FAIL]  Server Error',
                 f"HTTP {r.status_code} — check the Server Address setting.",
                 xbmcgui.NOTIFICATION_ERROR, 6000
             )
@@ -325,7 +325,7 @@ def _run_token_test(label, url, token, uid=None):
     except Exception as exc:
         progress.close()
         xbmcgui.Dialog().notification(
-            f'{label} ✗  Unreachable',
+            f'{label} [FAIL]  Unreachable',
             _friendly_exc(exc),
             xbmcgui.NOTIFICATION_ERROR, 7000
         )
@@ -338,10 +338,10 @@ def test_emby_token():
     token = (our.getSetting('emby_token') or '').strip()
     uid   = (our.getSetting('emby_uid')   or '').strip()
     if not url:
-        xbmcgui.Dialog().notification('Emby — Token Test', '⚠  No server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Emby — Token Test', 'No server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     if not token:
-        xbmcgui.Dialog().notification('Emby — Token Test', '⚠  No token stored.  Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Emby — Token Test', 'No token stored. Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     _run_token_test('Emby', url, token, uid)
 
@@ -352,10 +352,10 @@ def test_jelly_token():
     token = (our.getSetting('jelly_token') or '').strip()
     uid   = (our.getSetting('jelly_uid')   or '').strip()
     if not url:
-        xbmcgui.Dialog().notification('Jellyfin — Token Test', '⚠  No server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Jellyfin — Token Test', 'No server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     if not token:
-        xbmcgui.Dialog().notification('Jellyfin — Token Test', '⚠  No token stored.  Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Jellyfin — Token Test', 'No token stored. Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     _run_token_test('Jellyfin', url, token, uid)
 
@@ -1887,10 +1887,10 @@ def test_emby2_token():
     token = (our.getSetting('emby2_token') or '').strip()
     uid   = (our.getSetting('emby2_uid')   or '').strip()
     if not url:
-        xbmcgui.Dialog().notification('Emby Backup — Token Test', '⚠  No backup server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Emby Backup — Token Test', 'No backup server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     if not token:
-        xbmcgui.Dialog().notification('Emby Backup — Token Test', '⚠  No backup token stored.  Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Emby Backup — Token Test', 'No backup token stored. Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     _run_token_test('Emby Backup', url, token, uid)
 
@@ -1901,10 +1901,10 @@ def test_jelly2_token():
     token = (our.getSetting('jelly2_token') or '').strip()
     uid   = (our.getSetting('jelly2_uid')   or '').strip()
     if not url:
-        xbmcgui.Dialog().notification('Jellyfin Backup — Token Test', '⚠  No backup server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Jellyfin Backup — Token Test', 'No backup server URL configured.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     if not token:
-        xbmcgui.Dialog().notification('Jellyfin Backup — Token Test', '⚠  No backup token stored.  Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
+        xbmcgui.Dialog().notification('Jellyfin Backup — Token Test', 'No backup token stored. Enter credentials and restart Kodi.', xbmcgui.NOTIFICATION_WARNING, 5000)
         return
     _run_token_test('Jellyfin Backup', url, token, uid)
 
@@ -2052,29 +2052,32 @@ def play_video():
             elif master_preset == 4: reason = "1080p Focus"
             elif master_preset == 5: reason = "Light Mode"
 
+            _res = _res_shorthand(best['resolution'])
             msg = (
-                f"{c_lose}[{reason} — {best['server']} beat {best_other['server']}]"
-                f"{c_end} {c_win}{best['resolution']} {best['video_codec']} | "
-                f"{best['audio']} | {best['size_gb']}GB{c_end}"
+                f"{c_lose}{reason}{c_end}  "
+                f"{c_win}{_res} {best['video_codec']} | {best['audio']} | {best['size_gb']}GB{c_end}"
             )
         elif other_server in failed:
             title = f"{best['server']} WINNER ({other_server} Offline)"
+            _res = _res_shorthand(best['resolution'])
             msg = (
-                f"{c_win}{best['resolution']} {best['video_codec']} | {best['audio']} | "
-                f"{best['size_gb']}GB — {other_server} unreachable{c_end}"
+                f"{c_win}{_res} {best['video_codec']} | {best['audio']} | "
+                f"{best['size_gb']}GB{c_end}"
             )
         elif single_server:
             # Single Server Mode — clean playback notification, no "vs" language
-            title = f"{best['server']}  |  {_res_shorthand(best['resolution'])}  {best['video_codec']}"
+            _res = _res_shorthand(best['resolution'])
+            title = f"{best['server']}  |  {_res}  {best['video_codec']}"
             msg = (
-                f"{c_win}{best['resolution']} {best['video_codec']} | "
+                f"{c_win}{_res} {best['video_codec']} | "
                 f"{best['audio']} | {best['size_gb']}GB{c_end}"
             )
         else:
             title = f"{best['server']} WINNER (Best Safe Match)"
+            _res = _res_shorthand(best['resolution'])
             msg = (
-                f"{c_win}{best['resolution']} {best['video_codec']} | {best['audio']} | "
-                f"{best['size_gb']}GB — No safe match on {other_server}{c_end}"
+                f"{c_win}{_res} {best['video_codec']} | {best['audio']} | "
+                f"{best['size_gb']}GB{c_end}"
             )
 
         # ── Log to history/scoreboard ─────────────────────────────── #
@@ -2123,11 +2126,6 @@ def play_video():
             xbmc.log(f"Source Engine Pro [HISTORY]: {_he}", xbmc.LOGWARNING)
         # ─────────────────────────────────────────────────────────── #
 
-        try:
-            if show_trophy_notification:
-                show_trophy_notification(title, msg)
-        except Exception:
-            pass
         notify(title, msg, 7500)
 
         stream_url = (
@@ -2190,16 +2188,7 @@ if __name__ == '__main__':
         else {}
     )
     action = params.get('action')
-    if action == 'show_trophy':
-        try:
-            from resources.lib.notification_window import show_trophy_from_properties
-            show_trophy_from_properties()
-        except Exception as e:
-            xbmc.log(
-                "Source Engine Pro [TROPHY] script error: %s" % str(e),
-                xbmc.LOGERROR
-            )
-    elif action == 'show_history':
+    if action == 'show_history':
         show_history()
     elif action == 'clear_history':
         clear_history()
