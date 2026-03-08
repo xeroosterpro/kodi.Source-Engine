@@ -73,6 +73,42 @@ def _write_to_jellycon(url, user):
         xbmc.log(f"Source Engine Pro [BACKUP]: JellyCon update failed — {e}", xbmc.LOGWARNING)
 
 
+def _show_startup_status():
+    """Show a one-line toast after the first run_automation() indicating server health."""
+    try:
+        addon = xbmcaddon.Addon()
+        parts = []
+        for prefix, name in [('emby', 'Emby'), ('jelly', 'Jellyfin')]:
+            url = addon.getSetting(f'{prefix}_url').strip()
+            if not url:
+                continue
+            token = addon.getSetting(f'{prefix}_token').strip()
+            parts.append(f"{name} {'✓' if token else '✗'}")
+        if parts:
+            xbmcgui.Dialog().notification(
+                "Source Engine Pro",
+                "  ".join(parts),
+                xbmcgui.NOTIFICATION_INFO, 4000
+            )
+    except Exception as e:
+        xbmc.log(f"Source Engine Pro [STARTUP]: Status notification failed — {e}", xbmc.LOGWARNING)
+
+
+def _restore_primary(addon, prefix, name, url, user, pw, dialog):
+    """Restore EmbyCon/JellyCon to the primary server after a backup period."""
+    addon.setSetting(f'{prefix}_on_backup', 'false')
+    if prefix == 'emby':
+        _write_to_embycon(url, user, pw)
+    else:
+        _write_to_jellycon(url, user)
+    xbmc.log(f"Source Engine Pro [BACKUP]: {name} primary restored — switching back from backup.", xbmc.LOGINFO)
+    dialog.notification(
+        "Source Engine Pro",
+        f"{name} PRIMARY restored ✓",
+        xbmcgui.NOTIFICATION_INFO, 5000
+    )
+
+
 def run_automation():
     addon = xbmcaddon.Addon()
     dialog = xbmcgui.Dialog()
@@ -98,19 +134,8 @@ def run_automation():
             # ── Primary server health check / login ───────────────────────
             if check_token_health(clean_url, old_token):
                 xbmc.log(f"Source Engine Pro: {prefix.upper()} token is still healthy. Skipping login.", xbmc.LOGINFO)
-                # If we were on backup but primary is now healthy again, restore
                 if on_backup:
-                    xbmc.log(f"Source Engine Pro [BACKUP]: {name} primary is healthy again — restoring.", xbmc.LOGINFO)
-                    addon.setSetting(f'{prefix}_on_backup', 'false')
-                    if prefix == 'emby':
-                        _write_to_embycon(clean_url, user, pw)
-                    else:
-                        _write_to_jellycon(clean_url, user)
-                    dialog.notification(
-                        "Source Engine Pro",
-                        f"{name} PRIMARY restored ✓",
-                        xbmcgui.NOTIFICATION_INFO, 5000
-                    )
+                    _restore_primary(addon, prefix, name, clean_url, user, pw, dialog)
                 window.clearProperty(f"SourceEngine_{prefix}_error")
                 continue
 
@@ -119,18 +144,7 @@ def run_automation():
             if token:
                 # Primary login succeeded
                 if on_backup:
-                    # Primary came back — restore EmbyCon/JellyCon to primary
-                    xbmc.log(f"Source Engine Pro [BACKUP]: {name} primary login succeeded — restoring from backup.", xbmc.LOGINFO)
-                    addon.setSetting(f'{prefix}_on_backup', 'false')
-                    if prefix == 'emby':
-                        _write_to_embycon(clean_url, user, pw)
-                    else:
-                        _write_to_jellycon(clean_url, user)
-                    dialog.notification(
-                        "Source Engine Pro",
-                        f"{name} PRIMARY restored ✓",
-                        xbmcgui.NOTIFICATION_INFO, 5000
-                    )
+                    _restore_primary(addon, prefix, name, clean_url, user, pw, dialog)
 
                 addon.setSetting(f'{prefix}_token', token)
                 addon.setSetting(f'{prefix}_uid', str(uid) if uid else '')
@@ -365,6 +379,7 @@ if __name__ == '__main__':
     monitor.waitForAbort(15)
     if not monitor.abortRequested():
         run_automation()
+        _show_startup_status()
 
     while not monitor.abortRequested():
         if monitor.waitForAbort(300):

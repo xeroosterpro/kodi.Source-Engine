@@ -2176,7 +2176,9 @@ def play_video():
                     "that both servers are running."
                 )
         else:
-            notify("Source Engine Pro", "No exact match found in library.", 3500)
+            searched = [s for s in ['Emby', 'Jellyfin'] if s not in failed]
+            server_str = ' & '.join(searched) if searched else 'servers'
+            notify("Source Engine Pro", f'"{query}" — not found on {server_str}', 4000)
         xbmcplugin.setResolvedUrl(
             int(sys.argv[1]), False, listitem=xbmcgui.ListItem()
         )
