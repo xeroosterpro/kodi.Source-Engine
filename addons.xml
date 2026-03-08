@@ -15,6 +15,54 @@
             <platform>all</platform>
         </extension>
     </addon>
+    <addon id="repository.jellyfin.kodi" name="Kodi Jellyfin Addons" version="1.0.0" provider-name="null_pointer,angelblue05,sualfred,im85288,xnappo">
+        <requires>
+            <import addon="xbmc.addon" version="12.0.0"/>
+        </requires>
+        <extension point="xbmc.addon.repository" name="Kodi Jellyfin Repository">
+            <dir>
+                <info compressed="false">https://repo.jellyfin.org/releases/client/kodi/addons.xml</info>
+                <checksum>https://repo.jellyfin.org/releases/client/kodi/addons.xml.md5</checksum>
+                <datadir zip="true">https://repo.jellyfin.org/releases/client/kodi</datadir>
+            </dir>
+        </extension>
+        <extension point="xbmc.addon.metadata">
+            <summary>Kodi Jellyfin Addon Repository</summary>
+            <description>Official repository for JellyCon and other Jellyfin Kodi addons.</description>
+            <platform>all</platform>
+        </extension>
+    </addon>
+    <addon id="repository.embycon" name="EmbyCon Addons" version="0.0.2" provider-name="faush01">
+        <requires>
+            <import addon="xbmc.addon" version="12.0.0"/>
+        </requires>
+        <extension point="xbmc.addon.repository" name="EmbyCon Repository">
+            <dir minversion="20.999.0">
+                <info compressed="false">https://faush01.github.io/embycon_kodi_repo/repo/release/v21_omega/addons.xml</info>
+                <checksum>https://faush01.github.io/embycon_kodi_repo/repo/release/v21_omega/addons.xml.md5</checksum>
+                <datadir zip="true">https://faush01.github.io/embycon_kodi_repo/repo/release/v21_omega/</datadir>
+            </dir>
+        </extension>
+        <extension point="xbmc.addon.metadata">
+            <summary>EmbyCon Addon Repository</summary>
+            <description>Official repository for EmbyCon — the lightweight Emby browser for Kodi.</description>
+            <platform>all</platform>
+        </extension>
+    </addon>
+    <addon id="repository.jurialmunkey" name="jurialmunkey Alpha Repository" version="3.4" provider-name="jurialmunkey">
+        <extension point="xbmc.addon.repository" name="jurialmunkey Alpha Repository">
+            <dir minversion="20.9.1">
+                <info compressed="false">https://raw.githubusercontent.com/jurialmunkey/repository.jurialmunkey/master/omega/zips/addons.xml</info>
+                <checksum>https://raw.githubusercontent.com/jurialmunkey/repository.jurialmunkey/master/omega/zips/addons.xml.md5</checksum>
+                <datadir zip="true">https://raw.githubusercontent.com/jurialmunkey/repository.jurialmunkey/master/omega/zips/</datadir>
+            </dir>
+        </extension>
+        <extension point="xbmc.addon.metadata">
+            <summary>jurialmunkey Alpha Repository</summary>
+            <description>Official repository for TMDb Helper and other jurialmunkey Kodi addons.</description>
+            <platform>all</platform>
+        </extension>
+    </addon>
     <addon id="repository.xeroosterpro" name="XeroosterPro - Source Engine Pro" version="1.0.0" provider-name="xeroosterpro">
         <extension point="xbmc.addon.repository" name="XeroosterPro - Source Engine Pro">
             <info compressed="false">https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml</info>

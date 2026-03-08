@@ -3,6 +3,9 @@
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="script.module.requests" version="2.25.1"/>
+        <import addon="plugin.video.themoviedb.helper" version="0.0.1" optional="true"/>
+        <import addon="plugin.video.jellycon" version="0.0.1" optional="true"/>
+        <import addon="plugin.video.embycon" version="0.0.1" optional="true"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="plugin.py">
         <provides>video</provides>
