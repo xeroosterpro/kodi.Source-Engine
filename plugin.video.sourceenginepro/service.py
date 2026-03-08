@@ -1,4 +1,4 @@
-import xbmc, xbmcaddon, requests, threading, uuid, xbmcgui, urllib.parse
+import xbmc, xbmcaddon, requests, threading, uuid, xbmcgui, urllib.parse, os, shutil
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -328,9 +328,36 @@ class PlaybackReporter(xbmc.Player):
         except:
             pass
 
+def install_player_file():
+    """Copy the bundled TMDb Helper player file into place on first install or update."""
+    try:
+        addon        = xbmcaddon.Addon()
+        addon_path   = addon.getAddonInfo('path')
+        src          = os.path.join(addon_path, 'resources', 'players', 'sourceenginepro.json')
+        players_dir  = xbmc.translatePath('special://userdata/addon_data/plugin.video.themoviedb.helper/players/')
+        dst          = os.path.join(players_dir, 'sourceenginepro.json')
+
+        if not os.path.isfile(src):
+            xbmc.log('Source Engine Pro [PLAYER]: Bundled player file not found — skipping.', xbmc.LOGWARNING)
+            return
+
+        os.makedirs(players_dir, exist_ok=True)
+
+        # Only overwrite if the destination doesn't exist or the source is newer
+        if not os.path.isfile(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
+            shutil.copy2(src, dst)
+            xbmc.log('Source Engine Pro [PLAYER]: Installed TMDb Helper player file.', xbmc.LOGINFO)
+        else:
+            xbmc.log('Source Engine Pro [PLAYER]: Player file already up to date.', xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log(f'Source Engine Pro [PLAYER]: Failed to install player file — {e}', xbmc.LOGWARNING)
+
+
 if __name__ == '__main__':
     monitor = xbmc.Monitor()
     reporter = PlaybackReporter()
+
+    install_player_file()
 
     # Wait for the Kodi UI to fully initialise before showing any notifications.
     # Calling dialog.notification() too early in the boot sequence causes it to

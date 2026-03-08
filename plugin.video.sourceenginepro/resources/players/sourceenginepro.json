@@ -1,0 +1,7 @@
+{
+  "name": "Source Engine Pro",
+  "plugin": "plugin.video.sourceenginepro",
+  "priority": 100,
+  "play_movie": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&query={title}&year={year}&type=movie",
+  "play_episode": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&tvdb_id={tvdb}&query={tvshowtitle}&type=episode&season={season}&episode={episode}"
+}
