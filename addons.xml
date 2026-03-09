@@ -4,15 +4,21 @@
         <requires>
             <import addon="xbmc.python" version="3.0.0"/>
             <import addon="script.module.requests" version="2.25.1"/>
+            <import addon="plugin.video.themoviedb.helper" version="0.0.1" optional="true"/>
+            <import addon="plugin.video.jellycon" version="0.0.1" optional="true"/>
+            <import addon="plugin.video.embycon" version="0.0.1" optional="true"/>
         </requires>
         <extension point="xbmc.python.pluginsource" library="plugin.py">
             <provides>video</provides>
         </extension>
         <extension point="xbmc.service" library="service.py" start="startup"/>
-        <extension point="kodi.addon.metadata">
+        <extension point="xbmc.addon.metadata">
             <summary>Automated Emby/Jellyfin Quality Picker</summary>
-            <description>Source Engine Pro automatically picks the highest fidelity source across your Emby and Jellyfin servers. Features include automatic login, backup server failover, a 13-signal confidence funnel for accurate episode matching, and a full scoring pipeline for video/audio quality.</description>
+            <description>Source Engine Pro automatically logs in and picks the highest fidelity media source available across your private servers.</description>
             <platform>all</platform>
+            <assets>
+                <icon>resources/icon.png</icon>
+            </assets>
         </extension>
     </addon>
     <addon id="repository.jellyfin.kodi" name="Kodi Jellyfin Addons" version="1.0.0" provider-name="null_pointer,angelblue05,sualfred,im85288,xnappo">
@@ -65,12 +71,15 @@
     </addon>
     <addon id="repository.xeroosterpro" name="XeroosterPro - Source Engine Pro" version="1.0.0" provider-name="xeroosterpro">
         <extension point="xbmc.addon.repository" name="XeroosterPro - Source Engine Pro">
-            <info compressed="false">https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml</info>
-            <checksum>https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml.md5</checksum>
-            <datadir zip="true">https://xeroosterpro.github.io/kodi.Source-Engine/</datadir>
+            <dir minversion="20.0.0">
+                <info compressed="false">https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml</info>
+                <checksum>https://xeroosterpro.github.io/kodi.Source-Engine/addons.xml.md5</checksum>
+                <datadir zip="true">https://xeroosterpro.github.io/kodi.Source-Engine/</datadir>
+            </dir>
         </extension>
         <extension point="xbmc.addon.metadata">
             <summary>XeroosterPro - Source Engine Pro Repository</summary>
+            <description>Official repository for Source Engine Pro by XeroosterPro.</description>
             <platform>all</platform>
         </extension>
     </addon>
