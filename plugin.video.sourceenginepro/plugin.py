@@ -9,7 +9,7 @@ if len(sys.argv) > 2 and sys.argv[2]:
         sys.exit(0)
 # ─────────────────────────────────────────────────────────────────────────────
 
-import sys, xbmc, xbmcgui, xbmcplugin, xbmcaddon, requests, urllib.parse, threading, time, re, json, os, datetime
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon, requests, urllib.parse, threading, time, re, json, os, datetime
 
 import urllib3
 try:
@@ -22,6 +22,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 _WORD_RE = re.compile(r"[a-z0-9]+")
 _STOPWORDS = {"the", "a", "an", "and", "of"}
 _SE_RE = re.compile(r'[Ss]0*(\d+)\s*[Ee]0*(\d+)')
+_PORT_443_RE = re.compile(r':443(?!\d)')
+
+def _clean_url(url):
+    """Strip trailing slashes and default HTTPS port safely (won't mangle :4430 etc.)."""
+    return _PORT_443_RE.sub('', url.rstrip('/'))
 
 _tmdb_key_cache = None
 def _get_tmdb_api_key():
@@ -37,7 +42,7 @@ def _get_tmdb_api_key():
             _tmdb_key_cache = own_key
             xbmc.log("Source Engine [TMDB KEY]: Using user-configured API key", xbmc.LOGINFO)
             return own_key
-    except:
+    except Exception:
         pass
 
     # 2. Borrow from TMDb Helper (the user's metadata middleman)
@@ -48,12 +53,11 @@ def _get_tmdb_api_key():
             _tmdb_key_cache = key
             xbmc.log("Source Engine [TMDB KEY]: Using TMDb Helper's internal API key", xbmc.LOGINFO)
             return key
-    except:
+    except Exception:
         pass
 
     # 2b. Try reading TMDb Helper's key file directly
     try:
-        import os
         tmdb_helper_path = xbmcaddon.Addon('plugin.video.themoviedb.helper').getAddonInfo('path')
         key_file = os.path.join(tmdb_helper_path, 'resources', 'tmdbhelper', 'lib', 'api', 'api_keys', 'tmdb.py')
         if os.path.exists(key_file):
@@ -65,7 +69,7 @@ def _get_tmdb_api_key():
                 _tmdb_key_cache = key
                 xbmc.log(f"Source Engine [TMDB KEY]: Extracted TMDb Helper API key from file", xbmc.LOGINFO)
                 return key
-    except:
+    except Exception:
         pass
 
     # 3. Hardcoded fallback
@@ -108,7 +112,7 @@ def get_int(addon, key, default=0):
         val = addon.getSetting(key)
         if val != '':
             return int(val)
-    except:
+    except Exception:
         pass
     return default
 
@@ -234,16 +238,46 @@ def retrieve_jellycon_settings():
         else:
             server_address = f"{protocol}://{ipaddress}"
 
+    # JellyCon stores tokens in auth.json keyed by username — grab token+uid
+    # directly so the user never needs to type their password.
+    token   = ''
+    user_id = ''
+    try:
+        try:
+            auth_path = xbmcvfs.translatePath(
+                'special://userdata/addon_data/plugin.video.jellycon/auth.json'
+            )
+        except Exception:
+            auth_path = xbmc.translatePath(
+                'special://userdata/addon_data/plugin.video.jellycon/auth.json'
+            )
+        with open(auth_path, 'r', encoding='utf-8') as fh:
+            auth_data = json.load(fh)
+        # If username is blank, fall back to the first stored user
+        if not username and auth_data:
+            username = next(iter(auth_data))
+        if username and username in auth_data:
+            token   = auth_data[username].get('token',   '')
+            user_id = auth_data[username].get('user_id', '')
+    except Exception as e:
+        xbmc.log(f'Source Engine Pro [IMPORT]: Could not read JellyCon auth.json — {e}', xbmc.LOGWARNING)
+
     our = xbmcaddon.Addon()
     our.setSetting('jelly_url',  server_address)
     our.setSetting('jelly_user', username)
-    # JellyCon does not store a plain-text password — user must enter it manually
+    if token:
+        our.setSetting('jelly_token', token)
+    if user_id:
+        our.setSetting('jelly_uid', user_id)
 
-    msg = f"Jellyfin filled: {server_address}  ({username})"
-    if not username:
-        msg += " — enter password in settings to complete"
+    if token:
+        msg = f"Jellyfin ready: {server_address}  ({username}) — token imported"
+    elif username:
+        msg = f"Jellyfin filled: {server_address}  ({username}) — enter password to complete"
+    else:
+        msg = f"Jellyfin filled: {server_address} — enter username & password to complete"
     xbmcgui.Dialog().notification('Source Engine Pro', msg, xbmcgui.NOTIFICATION_INFO, 4000)
-    xbmc.log(f"Source Engine Pro [IMPORT]: Jellyfin settings imported from JellyCon — {server_address}", xbmc.LOGINFO)
+    xbmc.log(f"Source Engine Pro [IMPORT]: Jellyfin settings imported from JellyCon — {server_address} token={'yes' if token else 'no'}", xbmc.LOGINFO)
 
 
 def _friendly_exc(exc):
@@ -334,7 +368,7 @@ def _run_token_test(label, url, token, uid=None):
 
 def test_emby_token():
     our   = xbmcaddon.Addon()
-    url   = (our.getSetting('emby_url')   or '').rstrip('/').replace(':443', '')
+    url   = _clean_url(our.getSetting('emby_url') or '')
     token = (our.getSetting('emby_token') or '').strip()
     uid   = (our.getSetting('emby_uid')   or '').strip()
     if not url:
@@ -348,7 +382,7 @@ def test_emby_token():
 
 def test_jelly_token():
     our   = xbmcaddon.Addon()
-    url   = (our.getSetting('jelly_url')   or '').rstrip('/').replace(':443', '')
+    url   = _clean_url(our.getSetting('jelly_url') or '')
     token = (our.getSetting('jelly_token') or '').strip()
     uid   = (our.getSetting('jelly_uid')   or '').strip()
     if not url:
@@ -385,7 +419,7 @@ def show_history():
         ties       = sum(1 for e in entries if e.get('is_tie'))
         total      = len(entries)
         tally = (
-            f"[COLOR gold]  ★  SCOREBOARD[/COLOR]   "
+            f"[COLOR gold]  SCOREBOARD[/COLOR]   "
             f"[COLOR lime]Emby: {emby_wins} wins[/COLOR]   "
             f"[COLOR cyan]Jellyfin: {jelly_wins} wins[/COLOR]   "
             f"[COLOR yellow]Ties: {ties}[/COLOR]   "
@@ -447,7 +481,7 @@ def show_history():
             plot_lines = [
                 f"Date: {ts}",
                 f"Title: {media_title}{ep_tag}",
-                ("⚖  PERFECT TIE — User Picked" if is_tie else "[ MANUAL PICK — User Chose ]" if is_manual else ""),
+                ("PERFECT TIE — User Picked" if is_tie else "[ MANUAL PICK — User Chose ]" if is_manual else ""),
                 f"Winner: {winner}  ({win_reason})" + (f"  {w_score}pt" if w_score else ""),
                 f"Loser:  {loser}  ({loser_reason})" + (f"  {l_score}pt" if l_score is not None else ""),
                 f"Quality: {w_res} {w_codec}",
@@ -507,7 +541,7 @@ def tmdb_id_from_tvdb(tvdb_id):
             tmdb_id = results[0].get('id')
             if tmdb_id:
                 return str(tmdb_id)
-    except:
+    except Exception:
         pass
     return None
 
@@ -604,7 +638,7 @@ def get_tmdb_episode_context(show_tmdb_id, season, episode):
                     xbmc.log(
                         f"Source Engine [TMDB FALLBACK]: Found '{ctx['ep_name']}' "
                         f"via season listing",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
                     break
 
@@ -621,7 +655,7 @@ def get_tmdb_episode_context(show_tmdb_id, season, episode):
         f"ep_tmdb={ctx['ep_tmdb']} ep_tvdb={ctx['ep_tvdb']} ep_imdb={ctx['ep_imdb']} "
         f"name='{ctx['ep_name']}' runtime={ctx['ep_runtime_min']}min "
         f"season_eps={ctx['season_episode_count']} show='{ctx['show_name']}'",
-        xbmc.LOGWARNING
+        xbmc.LOGINFO
     )
     return ctx
 
@@ -640,7 +674,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
 
     try:
         max_size = float(addon.getSetting('max_size_gb').replace(',', '.') or 0)
-    except:
+    except Exception:
         max_size = 0.0
 
     preferred_server = None if tie_breaker == 0 else ('Emby' if tie_breaker == 1 else 'Jellyfin')
@@ -651,13 +685,13 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
         if on_backup:
             return {
                 "name": name,
-                "url": addon.getSetting(f'{prefix}2_url').rstrip('/').replace(':443', ''),
+                "url": _clean_url(addon.getSetting(f'{prefix}2_url')),
                 "token": addon.getSetting(f'{prefix}2_token'),
                 "uid": addon.getSetting(f'{prefix}2_uid'),
             }
         return {
             "name": name,
-            "url": addon.getSetting(f'{prefix}_url').rstrip('/').replace(':443', ''),
+            "url": _clean_url(addon.getSetting(f'{prefix}_url')),
             "token": addon.getSetting(f'{prefix}_token'),
             "uid": addon.getSetting(f'{prefix}_uid'),
         }
@@ -685,7 +719,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
         xbmc.log(
             f"Source Engine [INIT]: type={media_type} query='{query}' S{season}E{episode} | "
             f"tmdb={v_tmdb} tvdb={v_tvdb} imdb={v_imdb} resolved_tmdb={resolved_tmdb}",
-            xbmc.LOGWARNING
+            xbmc.LOGINFO
         )
         if resolved_tmdb:
             tmdb_ctx = get_tmdb_episode_context(resolved_tmdb, season, episode)
@@ -701,7 +735,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
         xbmc.log(
             f"Source Engine [INIT]: type={media_type} query='{query}' | "
             f"tmdb={v_tmdb} tvdb={v_tvdb} imdb={v_imdb} year={target_year}",
-            xbmc.LOGWARNING
+            xbmc.LOGINFO
         )
 
     safe_query = urllib.parse.quote(query) if query and not query.startswith('{') else ""
@@ -714,7 +748,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
             xbmc.log(
                 f"Source Engine [SKIP]: {s['name']} — URL or token not configured in addon settings. "
                 f"(url={'set' if s['url'] else 'EMPTY'}, token={'set' if s['token'] else 'EMPTY'})",
-                xbmc.LOGWARNING
+                xbmc.LOGINFO
             )
             with data_lock: failed.append(s['name'])
             return
@@ -744,12 +778,12 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                     with data_lock: failed.append(s['name'])
                     return
 
-                xbmc.log(f"Source Engine [EPISODE]: {s['name']} searching for '{query}' S{season}E{episode}", xbmc.LOGWARNING)
+                xbmc.log(f"Source Engine [EPISODE]: {s['name']} searching for '{query}' S{season}E{episode}", xbmc.LOGINFO)
                 xbmc.log(
                     f"Source Engine [EPISODE IDS]: ep_tmdb={v_ep_tmdb} ep_tvdb={v_ep_tvdb} "
                     f"ep_imdb={v_ep_imdb} ep_name='{v_ep_name}' "
                     f"ep_runtime={v_ep_runtime}min season_eps={v_season_ep_count}",
-                    xbmc.LOGWARNING
+                    xbmc.LOGINFO
                 )
 
                 # =============================================================
@@ -796,9 +830,9 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                 xbmc.log(
                                     f"Source Engine [SERIES A]: {s['name']} '{item.get('Name')}' "
                                     f"verified by {id_type}={id_val}",
-                                    xbmc.LOGWARNING
+                                    xbmc.LOGINFO
                                 )
-                    except:
+                    except Exception:
                         pass
 
                 # Strategy B: Name search (ALWAYS runs — wide net, not just fallback)
@@ -862,15 +896,15 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                 xbmc.log(
                                     f"Source Engine [SERIES B PROMOTED]: {s['name']} '{name}' "
                                     f"sim={sim:.2f} — name matched AND provider IDs confirmed!",
-                                    xbmc.LOGWARNING
+                                    xbmc.LOGINFO
                                 )
                             else:
                                 xbmc.log(
                                     f"Source Engine [SERIES B]: {s['name']} '{name}' "
                                     f"sim={sim:.2f} added by name (no PID match, pids={pids})",
-                                    xbmc.LOGWARNING
+                                    xbmc.LOGINFO
                                 )
-                    except:
+                    except Exception:
                         pass
 
                 # Strategy C: TMDB show name (if different from query — catches localized titles)
@@ -922,15 +956,15 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                 f"Source Engine [SERIES C]: {s['name']} '{name}' sim={sim:.2f} "
                                 f"via TMDB name '{v_show_name}'"
                                 f"{' [VERIFIED]' if is_verified else ''}",
-                                xbmc.LOGWARNING
+                                xbmc.LOGINFO
                             )
-                    except:
+                    except Exception:
                         pass
 
                 xbmc.log(
                     f"Source Engine [SERIES TOTAL]: {s['name']} collected {len(series_candidates)} "
                     f"candidate(s) ({len(provider_verified_sids)} provider-verified)",
-                    xbmc.LOGWARNING
+                    xbmc.LOGINFO
                 )
 
                 if not series_candidates:
@@ -1017,7 +1051,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                         xbmc.log(
                             f"Source Engine [EPISODES]: {s['name']} loaded {len(eps)} "
                             f"from '{cand['Name']}' ({cand['reason']})",
-                            xbmc.LOGWARNING
+                            xbmc.LOGINFO
                         )
                     except Exception as e:
                         xbmc.log(
@@ -1031,7 +1065,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                     xbmc.log(
                         f"Source Engine [FALLBACK]: {s['name']} Shows API returned 0 episodes, "
                         f"trying Items API with SeriesId...",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
                     for cand in sorted_candidates:
                         sid = cand['Id']
@@ -1050,9 +1084,9 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                             xbmc.log(
                                 f"Source Engine [FALLBACK]: {s['name']} loaded {len(eps)} "
                                 f"via Items for '{cand['Name']}'",
-                                xbmc.LOGWARNING
+                                xbmc.LOGINFO
                             )
-                        except:
+                        except Exception:
                             pass
 
                 # BONUS: Direct episode search (catches orphan episodes, misindexed
@@ -1086,7 +1120,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                             timeout=20
                         ).json()
                         _ingest_direct(r_d1.get('Items', []), "ep_name")
-                    except:
+                    except Exception:
                         pass
 
                 # Direct search 2: By show name (catches episodes when series lookup
@@ -1099,14 +1133,14 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                             timeout=25
                         ).json()
                         _ingest_direct(r_d2.get('Items', []), "show_name")
-                    except:
+                    except Exception:
                         pass
 
                 if bonus_count:
                     xbmc.log(
                         f"Source Engine [DIRECT SEARCH]: {s['name']} added {bonus_count} "
                         f"episode(s) via direct search",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
 
                 # Deduplicate episodes by ID before funnel processing.
@@ -1164,7 +1198,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                     f"→ {len(all_episodes)} unique episode(s) from "
                     f"{len(sorted_candidates)} series + {bonus_count} direct search "
                     f"(min_conf={MIN_CONFIDENCE})",
-                    xbmc.LOGWARNING
+                    xbmc.LOGINFO
                 )
                 scored_episodes = []
                 veto_count = 0
@@ -1280,7 +1314,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                             reasons.append(
                                                 f"ep_count_BAD({srv_count}/{tmdb_count})"
                                             )
-                                except:
+                                except Exception:
                                     pass
                         elif sdata.get('has_season') is False:
                             confidence -= 15
@@ -1336,7 +1370,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                 elif yd > 5:
                                     confidence -= 10
                                     reasons.append(f"year_BAD({py}!={target_year})")
-                            except:
+                            except Exception:
                                 pass
 
                     # --- S11: TMDB show name cross-check ---
@@ -1403,7 +1437,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                             f"S{ep_parent_season}E{ep_episode_num} "
                             f"CONFIDENCE={confidence:.0f} "
                             f"[{', '.join(reasons)}]",
-                            xbmc.LOGWARNING
+                            xbmc.LOGINFO
                         )
                     elif confidence > 20:
                         near_count += 1
@@ -1413,7 +1447,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                             f"S{ep_parent_season}E{ep_episode_num} "
                             f"conf={confidence:.0f} (below {MIN_CONFIDENCE}) "
                             f"[{', '.join(reasons)}]",
-                            xbmc.LOGWARNING
+                            xbmc.LOGINFO
                         )
                     else:
                         below_count += 1
@@ -1440,14 +1474,14 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                         f"Source Engine [FUNNEL RESULT]: {s['name']} "
                         f"{len(items_to_process)} episode(s) passed confidence threshold "
                         f"(best={max(e.get('match_confidence', 0) for e in items_to_process):.0f})",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
                     xbmc.log(
                         f"Source Engine [FUNNEL STATS]: {s['name']} "
                         f"raw_eps={len(all_episodes)} vetoed={veto_count} "
                         f"passed={len(items_to_process)} near={near_count} "
                         f"below_threshold={below_count}",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
                 else:
                     xbmc.log(
@@ -1460,7 +1494,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                         f"raw_eps={len(all_episodes)} vetoed={veto_count} "
                         f"passed=0 near={near_count} "
                         f"below_threshold={below_count}",
-                        xbmc.LOGWARNING
+                        xbmc.LOGINFO
                     )
 
             else:  # Movies
@@ -1495,9 +1529,9 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                         f"Source Engine [MOVIE FOUND]: {s['name']} "
                                         f"'{m.get('Name')}' ({m.get('ProductionYear')}) "
                                         f"verified by TMDB={v_tmdb}",
-                                        xbmc.LOGWARNING
+                                        xbmc.LOGINFO
                                     )
-                    except:
+                    except Exception:
                         pass
 
                 # SURGICAL MOVIE STRIKE 2: Exact IMDB with post-query verification
@@ -1529,9 +1563,9 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                         f"Source Engine [MOVIE FOUND]: {s['name']} "
                                         f"'{m.get('Name')}' ({m.get('ProductionYear')}) "
                                         f"verified by IMDB={v_imdb}",
-                                        xbmc.LOGWARNING
+                                        xbmc.LOGINFO
                                     )
-                    except:
+                    except Exception:
                         pass
 
                 # SURGICAL MOVIE STRIKE 3: Title & Year match
@@ -1560,7 +1594,7 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                             f"Source Engine [MOVIE FOUND]: {s['name']} "
                                             f"'{m_name}' matched by title+year"
                                             f"{' [DEEP DIVE]' if deep_dive else ''}",
-                                            xbmc.LOGWARNING
+                                            xbmc.LOGINFO
                                         )
                                 else:
                                     m['match_quality'] = 1.0 if _titles_match(query, m_name) else 0.85
@@ -1569,9 +1603,9 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                                         f"Source Engine [MOVIE FOUND]: {s['name']} "
                                         f"'{m_name}' matched by title"
                                         f"{' [DEEP DIVE]' if deep_dive else ''}",
-                                        xbmc.LOGWARNING
+                                        xbmc.LOGINFO
                                     )
-                    except:
+                    except Exception:
                         pass
 
                 # Deep dive deduplication: all strikes ran so the same movie
@@ -1883,7 +1917,7 @@ def retrieve_jelly2_settings():
 
 def test_emby2_token():
     our   = xbmcaddon.Addon()
-    url   = (our.getSetting('emby2_url')   or '').rstrip('/').replace(':443', '')
+    url   = _clean_url(our.getSetting('emby2_url') or '')
     token = (our.getSetting('emby2_token') or '').strip()
     uid   = (our.getSetting('emby2_uid')   or '').strip()
     if not url:
@@ -1897,7 +1931,7 @@ def test_emby2_token():
 
 def test_jelly2_token():
     our   = xbmcaddon.Addon()
-    url   = (our.getSetting('jelly2_url')   or '').rstrip('/').replace(':443', '')
+    url   = _clean_url(our.getSetting('jelly2_url') or '')
     token = (our.getSetting('jelly2_token') or '').strip()
     uid   = (our.getSetting('jelly2_uid')   or '').strip()
     if not url:
@@ -1947,7 +1981,7 @@ def play_video():
         xbmc.log(
             f"Source Engine Pro [WINNER]: Server '{best['server']}' won with "
             f"file: '{best['file_name']}' (confidence={best.get('match_confidence', '?')})",
-            xbmc.LOGWARNING
+            xbmc.LOGINFO
         )
 
         tie_breaker   = get_int(addon, 'tie_breaker', 0)
