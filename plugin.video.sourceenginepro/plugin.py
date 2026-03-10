@@ -206,6 +206,38 @@ def retrieve_embycon_settings():
     xbmc.log(f"Source Engine Pro [IMPORT]: Emby settings imported from EmbyCon — {url}", xbmc.LOGINFO)
 
 
+def _jellycon_data_path():
+    """Resolve the JellyCon addon_data directory path."""
+    special = 'special://userdata/addon_data/plugin.video.jellycon/'
+    try:
+        return xbmcvfs.translatePath(special)
+    except Exception:
+        return xbmc.translatePath(special)
+
+
+def _read_jellycon_settings_file():
+    """Directly read JellyCon's settings.xml as a fallback for getSetting().
+       Returns (server_address, username) or ('', '')."""
+    try:
+        settings_path = os.path.join(_jellycon_data_path(), 'settings.xml')
+        if not os.path.isfile(settings_path):
+            xbmc.log(f'Source Engine Pro [IMPORT]: JellyCon settings.xml not found at {settings_path}', xbmc.LOGWARNING)
+            return '', ''
+        with open(settings_path, 'r', encoding='utf-8') as fh:
+            raw = fh.read()
+        server = ''
+        user   = ''
+        for m in re.finditer(r'<setting\s+id="server_address"[^>]*>([^<]+)</setting>', raw):
+            server = m.group(1).strip()
+        for m in re.finditer(r'<setting\s+id="username"[^>]*>([^<]+)</setting>', raw):
+            user = m.group(1).strip()
+        xbmc.log(f'Source Engine Pro [IMPORT]: Direct file read — server_address={server!r}  username={user!r}', xbmc.LOGINFO)
+        return server, user
+    except Exception as e:
+        xbmc.log(f'Source Engine Pro [IMPORT]: Failed to read JellyCon settings.xml directly — {e}', xbmc.LOGWARNING)
+        return '', ''
+
+
 def retrieve_jellycon_settings():
     """Read connection info from the JellyCon addon and populate our Jellyfin settings."""
     try:
@@ -217,51 +249,63 @@ def retrieve_jellycon_settings():
         )
         return
 
-    # JellyCon stores the full URL in server_address; fallback to parts
+    # ── 1. Try standard getSetting() ──────────────────────────────────────────
     server_address = jellycon.getSetting('server_address') or ''
     username       = jellycon.getSetting('username') or ''
+    xbmc.log(f'Source Engine Pro [IMPORT]: getSetting → server_address={server_address!r}  username={username!r}', xbmc.LOGINFO)
 
+    # ── 2. Fallback: read settings.xml directly (Android sometimes returns
+    #       empty strings from getSetting for other addons) ────────────────────
+    if not server_address:
+        xbmc.log('Source Engine Pro [IMPORT]: getSetting returned empty — trying direct file read', xbmc.LOGINFO)
+        server_address, username_file = _read_jellycon_settings_file()
+        if not username:
+            username = username_file
+
+    # ── 3. Fallback: construct URL from legacy ipaddress/port fields ──────────
     if not server_address:
         protocol_idx = jellycon.getSetting('protocol') or '0'
         protocol  = 'https' if protocol_idx == '1' else 'http'
         ipaddress = jellycon.getSetting('ipaddress') or ''
         port      = jellycon.getSetting('port') or ''
-        if not ipaddress:
-            xbmcgui.Dialog().notification(
-                'Source Engine Pro', 'JellyCon has no server address configured.',
-                xbmcgui.NOTIFICATION_WARNING, 3500
-            )
-            return
-        std_ports = {'https': '443', 'http': '80'}
-        if port and port != std_ports.get(protocol, ''):
-            server_address = f"{protocol}://{ipaddress}:{port}"
-        else:
-            server_address = f"{protocol}://{ipaddress}"
+        if ipaddress:
+            std_ports = {'https': '443', 'http': '80'}
+            if port and port != std_ports.get(protocol, ''):
+                server_address = f"{protocol}://{ipaddress}:{port}"
+            else:
+                server_address = f"{protocol}://{ipaddress}"
 
-    # JellyCon stores tokens in auth.json keyed by username — grab token+uid
-    # directly so the user never needs to type their password.
+    # ── 4. Read auth.json for token, user_id, and possibly username ───────────
     token   = ''
     user_id = ''
     try:
-        try:
-            auth_path = xbmcvfs.translatePath(
-                'special://userdata/addon_data/plugin.video.jellycon/auth.json'
-            )
-        except Exception:
-            auth_path = xbmc.translatePath(
-                'special://userdata/addon_data/plugin.video.jellycon/auth.json'
-            )
-        with open(auth_path, 'r', encoding='utf-8') as fh:
-            auth_data = json.load(fh)
-        # If username is blank, fall back to the first stored user
-        if not username and auth_data:
-            username = next(iter(auth_data))
-        if username and username in auth_data:
-            token   = auth_data[username].get('token',   '')
-            user_id = auth_data[username].get('user_id', '')
+        auth_path = os.path.join(_jellycon_data_path(), 'auth.json')
+        if os.path.isfile(auth_path):
+            with open(auth_path, 'r', encoding='utf-8') as fh:
+                auth_data = json.load(fh)
+            xbmc.log(f'Source Engine Pro [IMPORT]: auth.json users: {list(auth_data.keys())}', xbmc.LOGINFO)
+            # If username is blank, fall back to the first stored user
+            if not username and auth_data:
+                username = next(iter(auth_data))
+            if username and username in auth_data:
+                token   = auth_data[username].get('token',   '')
+                user_id = auth_data[username].get('user_id', '')
+        else:
+            xbmc.log(f'Source Engine Pro [IMPORT]: auth.json not found at {auth_path}', xbmc.LOGINFO)
     except Exception as e:
         xbmc.log(f'Source Engine Pro [IMPORT]: Could not read JellyCon auth.json — {e}', xbmc.LOGWARNING)
 
+    # ── 5. If we still have nothing, tell the user to configure JellyCon ──────
+    if not server_address:
+        xbmcgui.Dialog().notification(
+            'Source Engine Pro',
+            'JellyCon has no server configured. Open JellyCon and set it up first.',
+            xbmcgui.NOTIFICATION_WARNING, 5000
+        )
+        xbmc.log('Source Engine Pro [IMPORT]: JellyCon has no server_address in settings, file, or auth — aborting', xbmc.LOGWARNING)
+        return
+
+    # ── 6. Write everything to our settings ───────────────────────────────────
     our = xbmcaddon.Addon()
     our.setSetting('jelly_url',  server_address)
     our.setSetting('jelly_user', username)
@@ -270,6 +314,8 @@ def retrieve_jellycon_settings():
     if user_id:
         our.setSetting('jelly_uid', user_id)
 
+    xbmc.log(f'Source Engine Pro [IMPORT]: Wrote jelly_url={server_address!r}  jelly_user={username!r}  token={"yes" if token else "no"}  uid={"yes" if user_id else "no"}', xbmc.LOGINFO)
+
     if token:
         msg = f"Jellyfin ready: {server_address}  ({username}) — token imported"
     elif username:
@@ -277,7 +323,6 @@ def retrieve_jellycon_settings():
     else:
         msg = f"Jellyfin filled: {server_address} — enter username & password to complete"
     xbmcgui.Dialog().notification('Source Engine Pro', msg, xbmcgui.NOTIFICATION_INFO, 4000)
-    xbmc.log(f"Source Engine Pro [IMPORT]: Jellyfin settings imported from JellyCon — {server_address} token={'yes' if token else 'no'}", xbmc.LOGINFO)
 
 
 def _friendly_exc(exc):
