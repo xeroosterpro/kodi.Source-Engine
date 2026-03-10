@@ -2269,7 +2269,41 @@ def play_video():
         if _handle >= 0:
             xbmcplugin.setResolvedUrl(_handle, False, listitem=xbmcgui.ListItem())
 
+def _ensure_tmdb_player_installed():
+    """Install the bundled TMDb Helper player JSON file the first time the plugin
+    runs — belt-and-suspenders alongside service.py which does the same on boot.
+    This makes the 'Source Engine Pro' player appear in TMDb Helper immediately
+    after installing the addon, without needing a Kodi restart."""
+    import shutil
+    try:
+        _addon    = xbmcaddon.Addon()
+        _src      = os.path.join(_addon.getAddonInfo('path'), 'resources', 'players', 'sourceenginepro.json')
+        if not os.path.isfile(_src):
+            return
+        try:
+            import xbmcvfs as _vfs
+            _pdir = _vfs.translatePath('special://userdata/addon_data/plugin.video.themoviedb.helper/players/')
+        except Exception:
+            _pdir = xbmc.translatePath('special://userdata/addon_data/plugin.video.themoviedb.helper/players/')
+        _dst = os.path.join(_pdir, 'sourceenginepro.json')
+        if not os.path.isfile(_dst):
+            os.makedirs(_pdir, exist_ok=True)
+            shutil.copy2(_src, _dst)
+            xbmc.log('Source Engine Pro [PLAYER]: Player file installed to TMDb Helper players dir.', xbmc.LOGINFO)
+            # Let the user know so they look for the right player name
+            xbmcgui.Dialog().notification(
+                'Source Engine Pro',
+                'Player added to TMDb Helper — open TMDb Helper Players and select "Source Engine Pro" as default.',
+                xbmcgui.NOTIFICATION_INFO,
+                8000,
+            )
+    except Exception as _e:
+        xbmc.log(f'Source Engine Pro [PLAYER]: Could not install player file — {_e}', xbmc.LOGWARNING)
+
+
 if __name__ == '__main__':
+    _ensure_tmdb_player_installed()
+
     params = (
         dict(urllib.parse.parse_qsl(sys.argv[2][1:]))
         if len(sys.argv) > 2 and sys.argv[2]
