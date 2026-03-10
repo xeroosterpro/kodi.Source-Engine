@@ -2225,7 +2225,16 @@ def play_video():
         # failures where content-lookup times out on direct Emby/Jellyfin streams.
         play_item.setContentLookup(False)
 
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, listitem=play_item)
+        _handle = int(sys.argv[1])
+        if _handle >= 0:
+            # Resolver mode — called by TMDb Helper (custom player JSON) or Kodi
+            # as a content resolver.  setResolvedUrl hands the stream back to Kodi.
+            xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
+        else:
+            # RunPlugin / Autogen mode — TMDb Helper "Autogen.plugin.video.*" player,
+            # or any caller that uses RunPlugin() instead of a resolver call.
+            # handle is -1 so setResolvedUrl does nothing; use Player().play() instead.
+            xbmc.Player().play(stream_url, play_item)
     else:
         if len(failed) >= 2 or ("Emby" in failed and "Jellyfin" in failed):
             addon_check = xbmcaddon.Addon()
@@ -2256,9 +2265,9 @@ def play_video():
             searched = [s for s in ['Emby', 'Jellyfin'] if s not in failed]
             server_str = ' & '.join(searched) if searched else 'servers'
             notify("Source Engine Pro", f'"{query}" — not found on {server_str}', 4000)
-        xbmcplugin.setResolvedUrl(
-            int(sys.argv[1]), False, listitem=xbmcgui.ListItem()
-        )
+        _handle = int(sys.argv[1])
+        if _handle >= 0:
+            xbmcplugin.setResolvedUrl(_handle, False, listitem=xbmcgui.ListItem())
 
 if __name__ == '__main__':
     params = (
