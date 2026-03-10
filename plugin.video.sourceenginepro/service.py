@@ -365,7 +365,9 @@ class PlaybackReporter(xbmc.Player):
             pass
 
 def install_player_file():
-    """Copy the bundled TMDb Helper player file into place on first install or update."""
+    """Copy the bundled TMDb Helper player file into place on first install or update.
+    Also sets Source Engine Pro as the default TMDb Helper player if no default is
+    currently configured (so users don't have to do it manually on each device)."""
     try:
         addon        = xbmcaddon.Addon()
         addon_path   = addon.getAddonInfo('path')
@@ -385,6 +387,32 @@ def install_player_file():
             xbmc.log('Source Engine Pro [PLAYER]: Installed TMDb Helper player file.', xbmc.LOGINFO)
         else:
             xbmc.log('Source Engine Pro [PLAYER]: Player file already up to date.', xbmc.LOGINFO)
+
+        # Auto-set Source Engine Pro as the default player in TMDb Helper
+        # if no default is currently configured. This saves the user from
+        # having to set it manually on each device (especially Android/Shield).
+        try:
+            tmdb = xbmcaddon.Addon('plugin.video.themoviedb.helper')
+            for setting_id, play_mode in (
+                ('default_player_movies',   'sourceenginepro play_movie'),
+                ('default_player_episodes', 'sourceenginepro play_episode'),
+            ):
+                current = tmdb.getSetting(setting_id) or ''
+                if not current:
+                    tmdb.setSetting(setting_id, play_mode)
+                    xbmc.log(
+                        f'Source Engine Pro [PLAYER]: Set TMDb Helper {setting_id} = {play_mode!r}',
+                        xbmc.LOGINFO,
+                    )
+                else:
+                    xbmc.log(
+                        f'Source Engine Pro [PLAYER]: TMDb Helper {setting_id} already set to {current!r} — not overwriting.',
+                        xbmc.LOGINFO,
+                    )
+        except Exception as e:
+            # TMDb Helper may not be installed; that's fine.
+            xbmc.log(f'Source Engine Pro [PLAYER]: Could not configure TMDb Helper defaults — {e}', xbmc.LOGINFO)
+
     except Exception as e:
         xbmc.log(f'Source Engine Pro [PLAYER]: Failed to install player file — {e}', xbmc.LOGWARNING)
 
