@@ -364,6 +364,71 @@ class PlaybackReporter(xbmc.Player):
         except:
             pass
 
+def _set_tmdb_helper_defaults():
+    """Write Source Engine Pro as the default TMDb Helper player directly into
+    TMDb Helper's settings.xml.  Cross-addon setSetting() does not persist to
+    disk on Android/Shield, so we bypass it and edit the file ourselves.
+    Only fills in settings that are currently absent or empty."""
+    import xml.etree.ElementTree as ET
+
+    DEFAULTS = {
+        'default_player_movies':   'sourceenginepro play_movie',
+        'default_player_episodes': 'sourceenginepro play_episode',
+    }
+
+    try:
+        tmdb_data_dir = xbmc.translatePath(
+            'special://userdata/addon_data/plugin.video.themoviedb.helper/'
+        )
+        settings_path = os.path.join(tmdb_data_dir, 'settings.xml')
+
+        # Parse existing file or create a minimal skeleton.
+        if os.path.isfile(settings_path):
+            try:
+                tree = ET.parse(settings_path)
+                root = tree.getroot()
+            except ET.ParseError as pe:
+                xbmc.log(f'Source Engine Pro [PLAYER]: TMDb Helper settings.xml parse error — {pe}', xbmc.LOGWARNING)
+                return
+        else:
+            # TMDb Helper hasn't written its settings yet — create the file.
+            os.makedirs(tmdb_data_dir, exist_ok=True)
+            root = ET.Element('settings', version='2')
+            tree = ET.ElementTree(root)
+
+        changed = False
+        for setting_id, value in DEFAULTS.items():
+            # Locate an existing <setting id="..."> element.
+            elem = next(
+                (el for el in root.findall('setting') if el.get('id') == setting_id),
+                None,
+            )
+            if elem is None:
+                # Missing entirely — add it.
+                elem = ET.SubElement(root, 'setting', id=setting_id)
+                elem.text = value
+                changed = True
+                xbmc.log(f'Source Engine Pro [PLAYER]: Added TMDb Helper {setting_id} = {value!r}', xbmc.LOGINFO)
+            elif not (elem.text or '').strip():
+                # Present but empty — fill it in.
+                elem.text = value
+                changed = True
+                xbmc.log(f'Source Engine Pro [PLAYER]: Set TMDb Helper {setting_id} = {value!r}', xbmc.LOGINFO)
+            else:
+                xbmc.log(
+                    f'Source Engine Pro [PLAYER]: TMDb Helper {setting_id} already = {elem.text.strip()!r} — not overwriting.',
+                    xbmc.LOGINFO,
+                )
+
+        if changed:
+            tree.write(settings_path, encoding='unicode', xml_declaration=False)
+            xbmc.log('Source Engine Pro [PLAYER]: TMDb Helper settings.xml updated on disk.', xbmc.LOGINFO)
+
+    except Exception as e:
+        # TMDb Helper may not be installed or its data dir may not exist yet.
+        xbmc.log(f'Source Engine Pro [PLAYER]: Could not update TMDb Helper settings.xml — {e}', xbmc.LOGINFO)
+
+
 def install_player_file():
     """Copy the bundled TMDb Helper player file into place on first install or update.
     Also sets Source Engine Pro as the default TMDb Helper player if no default is
@@ -388,30 +453,10 @@ def install_player_file():
         else:
             xbmc.log('Source Engine Pro [PLAYER]: Player file already up to date.', xbmc.LOGINFO)
 
-        # Auto-set Source Engine Pro as the default player in TMDb Helper
-        # if no default is currently configured. This saves the user from
-        # having to set it manually on each device (especially Android/Shield).
-        try:
-            tmdb = xbmcaddon.Addon('plugin.video.themoviedb.helper')
-            for setting_id, play_mode in (
-                ('default_player_movies',   'sourceenginepro play_movie'),
-                ('default_player_episodes', 'sourceenginepro play_episode'),
-            ):
-                current = tmdb.getSetting(setting_id) or ''
-                if not current:
-                    tmdb.setSetting(setting_id, play_mode)
-                    xbmc.log(
-                        f'Source Engine Pro [PLAYER]: Set TMDb Helper {setting_id} = {play_mode!r}',
-                        xbmc.LOGINFO,
-                    )
-                else:
-                    xbmc.log(
-                        f'Source Engine Pro [PLAYER]: TMDb Helper {setting_id} already set to {current!r} — not overwriting.',
-                        xbmc.LOGINFO,
-                    )
-        except Exception as e:
-            # TMDb Helper may not be installed; that's fine.
-            xbmc.log(f'Source Engine Pro [PLAYER]: Could not configure TMDb Helper defaults — {e}', xbmc.LOGINFO)
+        # Auto-set Source Engine Pro as the default player in TMDb Helper by writing
+        # directly to its settings.xml. Cross-addon setSetting() does not persist to
+        # disk on Android/Shield, so direct file manipulation is required.
+        _set_tmdb_helper_defaults()
 
     except Exception as e:
         xbmc.log(f'Source Engine Pro [PLAYER]: Failed to install player file — {e}', xbmc.LOGWARNING)
