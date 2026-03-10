@@ -2270,33 +2270,36 @@ def play_video():
             xbmcplugin.setResolvedUrl(_handle, False, listitem=xbmcgui.ListItem())
 
 def _ensure_tmdb_player_installed():
-    """Install the bundled TMDb Helper player JSON file the first time the plugin
-    runs — belt-and-suspenders alongside service.py which does the same on boot.
-    This makes the 'Source Engine Pro' player appear in TMDb Helper immediately
-    after installing the addon, without needing a Kodi restart."""
-    import shutil
+    """Install sourceenginepro.json into TMDb Helper's players directory.
+
+    Uses xbmcvfs + special:// paths throughout — the only reliable file API
+    on Android/Shield.  special://profile/ is what TMDb Helper itself uses
+    (PLAYERS_BASEDIR_USER constant in its source) so we must match that exactly.
+    """
     try:
-        _addon    = xbmcaddon.Addon()
-        _src      = os.path.join(_addon.getAddonInfo('path'), 'resources', 'players', 'sourceenginepro.json')
-        if not os.path.isfile(_src):
+        import xbmcvfs
+        # Source: our bundled JSON, referenced via special:// so path works everywhere
+        _src  = 'special://home/addons/plugin.video.sourceenginepro/resources/players/sourceenginepro.json'
+        # Destination: the exact path TMDb Helper scans — special://profile/, NOT userdata
+        _pdir = 'special://profile/addon_data/plugin.video.themoviedb.helper/players/'
+        _dst  = _pdir + 'sourceenginepro.json'
+
+        if not xbmcvfs.exists(_src):
+            xbmc.log('Source Engine Pro [PLAYER]: sourceenginepro.json not found in addon resources.', xbmc.LOGWARNING)
             return
-        try:
-            import xbmcvfs as _vfs
-            _pdir = _vfs.translatePath('special://userdata/addon_data/plugin.video.themoviedb.helper/players/')
-        except Exception:
-            _pdir = xbmc.translatePath('special://userdata/addon_data/plugin.video.themoviedb.helper/players/')
-        _dst = os.path.join(_pdir, 'sourceenginepro.json')
-        if not os.path.isfile(_dst):
-            os.makedirs(_pdir, exist_ok=True)
-            shutil.copy2(_src, _dst)
-            xbmc.log('Source Engine Pro [PLAYER]: Player file installed to TMDb Helper players dir.', xbmc.LOGINFO)
-            # Let the user know so they look for the right player name
-            xbmcgui.Dialog().notification(
-                'Source Engine Pro',
-                'Player added to TMDb Helper — open TMDb Helper Players and select "Source Engine Pro" as default.',
-                xbmcgui.NOTIFICATION_INFO,
-                8000,
-            )
+
+        if xbmcvfs.exists(_dst):
+            return  # Already installed — nothing to do
+
+        xbmcvfs.mkdirs(_pdir)
+        xbmcvfs.copy(_src, _dst)
+        xbmc.log('Source Engine Pro [PLAYER]: Installed player file to TMDb Helper.', xbmc.LOGINFO)
+        xbmcgui.Dialog().notification(
+            'Source Engine Pro',
+            'Player added! In TMDb Helper \u2192 Players, select "Source Engine Pro" as your default.',
+            xbmcgui.NOTIFICATION_INFO,
+            8000,
+        )
     except Exception as _e:
         xbmc.log(f'Source Engine Pro [PLAYER]: Could not install player file — {_e}', xbmc.LOGWARNING)
 
