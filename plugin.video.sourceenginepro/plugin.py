@@ -2269,39 +2269,57 @@ def play_video():
         if _handle >= 0:
             xbmcplugin.setResolvedUrl(_handle, False, listitem=xbmcgui.ListItem())
 
-def _ensure_tmdb_player_installed():
-    """Install sourceenginepro.json into TMDb Helper's players directory.
+_PLAYER_JSON = '''{
+  "name": "Source Engine Pro",
+  "plugin": "plugin.video.sourceenginepro",
+  "priority": 1,
+  "is_resolvable": "true",
+  "play_movie": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&query={title}&year={year}&type=movie",
+  "play_episode": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&tvdb_id={tvdb}&query={tvshowtitle}&type=episode&season={season}&episode={episode}"
+}'''
 
-    Uses xbmcvfs + special:// paths throughout — the only reliable file API
-    on Android/Shield.  special://profile/ is what TMDb Helper itself uses
-    (PLAYERS_BASEDIR_USER constant in its source) so we must match that exactly.
+
+def _ensure_tmdb_player_installed():
+    """Write sourceenginepro.json directly into TMDb Helper's players directory.
+
+    Uses xbmcvfs.File() to write the JSON content directly — avoids cross-path
+    xbmcvfs.copy() which can silently fail on Android.  special://profile/ is
+    what TMDb Helper scans (PLAYERS_BASEDIR_USER in its source).
     """
     try:
         import xbmcvfs
-        # Source: our bundled JSON, referenced via special:// so path works everywhere
-        _src  = 'special://home/addons/plugin.video.sourceenginepro/resources/players/sourceenginepro.json'
-        # Destination: the exact path TMDb Helper scans — special://profile/, NOT userdata
+
         _pdir = 'special://profile/addon_data/plugin.video.themoviedb.helper/players/'
         _dst  = _pdir + 'sourceenginepro.json'
 
-        if not xbmcvfs.exists(_src):
-            xbmc.log('Source Engine Pro [PLAYER]: sourceenginepro.json not found in addon resources.', xbmc.LOGWARNING)
-            return
+        xbmc.log(f'Source Engine Pro [PLAYER]: Checking {_dst}', xbmc.LOGINFO)
 
         if xbmcvfs.exists(_dst):
-            return  # Already installed — nothing to do
+            xbmc.log('Source Engine Pro [PLAYER]: Player file already exists — skipping.', xbmc.LOGINFO)
+            return
 
         xbmcvfs.mkdirs(_pdir)
-        xbmcvfs.copy(_src, _dst)
-        xbmc.log('Source Engine Pro [PLAYER]: Installed player file to TMDb Helper.', xbmc.LOGINFO)
-        xbmcgui.Dialog().notification(
-            'Source Engine Pro',
-            'Player added! In TMDb Helper \u2192 Players, select "Source Engine Pro" as your default.',
-            xbmcgui.NOTIFICATION_INFO,
-            8000,
-        )
+        xbmc.log(f'Source Engine Pro [PLAYER]: Created dir {_pdir}', xbmc.LOGINFO)
+
+        # Write the JSON directly — no copy, no source path issues
+        fh = xbmcvfs.File(_dst, 'w')
+        fh.write(_PLAYER_JSON)
+        fh.close()
+        xbmc.log('Source Engine Pro [PLAYER]: Wrote player JSON.', xbmc.LOGINFO)
+
+        # Verify the write succeeded
+        if xbmcvfs.exists(_dst):
+            xbmc.log('Source Engine Pro [PLAYER]: VERIFIED — player file exists at destination.', xbmc.LOGINFO)
+            xbmcgui.Dialog().notification(
+                'Source Engine Pro',
+                'Player added! In TMDb Helper > Players, select "Source Engine Pro" as default.',
+                xbmcgui.NOTIFICATION_INFO,
+                8000,
+            )
+        else:
+            xbmc.log('Source Engine Pro [PLAYER]: FAILED — file not found after write!', xbmc.LOGWARNING)
     except Exception as _e:
-        xbmc.log(f'Source Engine Pro [PLAYER]: Could not install player file — {_e}', xbmc.LOGWARNING)
+        xbmc.log(f'Source Engine Pro [PLAYER]: Exception — {_e}', xbmc.LOGWARNING)
 
 
 if __name__ == '__main__':

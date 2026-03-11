@@ -430,30 +430,31 @@ def _set_tmdb_helper_defaults():
         xbmc.log(f'Source Engine Pro [PLAYER]: Could not update TMDb Helper settings.xml — {e}', xbmc.LOGINFO)
 
 
+_PLAYER_JSON = '''{
+  "name": "Source Engine Pro",
+  "plugin": "plugin.video.sourceenginepro",
+  "priority": 1,
+  "is_resolvable": "true",
+  "play_movie": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&query={title}&year={year}&type=movie",
+  "play_episode": "plugin://plugin.video.sourceenginepro/?tmdb_id={tmdb}&imdb_id={imdb}&tvdb_id={tvdb}&query={tvshowtitle}&type=episode&season={season}&episode={episode}"
+}'''
+
+
 def install_player_file():
-    """Copy the bundled TMDb Helper player file into place on first install or update.
-    Uses xbmcvfs + special://profile/ — the same paths TMDb Helper uses internally.
+    """Write sourceenginepro.json directly into TMDb Helper's players directory.
+    Uses xbmcvfs.File() to write content directly — avoids cross-path copy issues.
     Also sets Source Engine Pro as the default TMDb Helper player if not yet configured."""
     try:
-        # Source: our bundled JSON via special:// (works on every platform)
-        src      = 'special://home/addons/plugin.video.sourceenginepro/resources/players/sourceenginepro.json'
-        # Destination: special://profile/ is what TMDb Helper scans (PLAYERS_BASEDIR_USER)
-        pdir     = 'special://profile/addon_data/plugin.video.themoviedb.helper/players/'
-        dst      = pdir + 'sourceenginepro.json'
-
-        if not xbmcvfs.exists(src):
-            xbmc.log('Source Engine Pro [PLAYER]: Bundled player file not found — skipping.', xbmc.LOGWARNING)
-            return
+        pdir = 'special://profile/addon_data/plugin.video.themoviedb.helper/players/'
+        dst  = pdir + 'sourceenginepro.json'
 
         xbmcvfs.mkdirs(pdir)
 
-        # Translate to filesystem paths to compare modification times
-        src_fs = xbmcvfs.translatePath(src)
-        dst_fs = xbmcvfs.translatePath(dst)
-
-        if not xbmcvfs.exists(dst) or os.path.getmtime(src_fs) > os.path.getmtime(dst_fs):
-            xbmcvfs.copy(src, dst)
-            xbmc.log('Source Engine Pro [PLAYER]: Installed TMDb Helper player file.', xbmc.LOGINFO)
+        if not xbmcvfs.exists(dst):
+            fh = xbmcvfs.File(dst, 'w')
+            fh.write(_PLAYER_JSON)
+            fh.close()
+            xbmc.log('Source Engine Pro [PLAYER]: Wrote player JSON to TMDb Helper.', xbmc.LOGINFO)
         else:
             xbmc.log('Source Engine Pro [PLAYER]: Player file already up to date.', xbmc.LOGINFO)
 
