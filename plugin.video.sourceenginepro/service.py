@@ -3,6 +3,12 @@ import xbmc, xbmcaddon, xbmcvfs, requests, threading, uuid, xbmcgui, urllib.pars
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+try:
+    from resources.lib.server_stats import fetch_all_stats, format_startup_summary
+except Exception:
+    fetch_all_stats = None
+    format_startup_summary = None
+
 def check_token_health(url, token):
     if not token:
         return False
@@ -74,7 +80,8 @@ def _write_to_jellycon(url, user):
 
 
 def _show_startup_status():
-    """Show a one-line toast after the first run_automation() indicating server health."""
+    """Show a one-line toast after the first run_automation() indicating server health,
+    optionally followed by a richer stats toast when startup_stats is enabled."""
     try:
         addon = xbmcaddon.Addon()
         parts = []
@@ -92,6 +99,31 @@ def _show_startup_status():
                 "  ".join(parts),
                 xbmcgui.NOTIFICATION_INFO, 4000
             )
+
+        # ── Enhanced startup stats ──────────────────────────────────
+        if addon.getSetting('startup_stats') != 'true':
+            return
+        if fetch_all_stats is None or format_startup_summary is None:
+            return
+
+        xbmc.sleep(4500)  # wait for the health toast to clear
+
+        for prefix, name in [('emby', 'Emby'), ('jelly', 'Jellyfin')]:
+            url = addon.getSetting(f'{prefix}_url').strip()
+            token = addon.getSetting(f'{prefix}_token').strip()
+            if not url or not token:
+                continue
+            try:
+                stats = fetch_all_stats(url, token)
+                summary = format_startup_summary(stats, name)
+                xbmcgui.Dialog().notification(
+                    "Source Engine Pro",
+                    summary,
+                    xbmcgui.NOTIFICATION_INFO, 5000
+                )
+                xbmc.sleep(5500)
+            except Exception as inner:
+                xbmc.log(f"Source Engine Pro [STARTUP]: Stats toast failed for {name} — {inner}", xbmc.LOGWARNING)
     except Exception as e:
         xbmc.log(f"Source Engine Pro [STARTUP]: Status notification failed — {e}", xbmc.LOGWARNING)
 

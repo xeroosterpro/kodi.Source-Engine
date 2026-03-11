@@ -17,6 +17,12 @@ try:
 except Exception:
     show_trophy_notification = None
 
+try:
+    from resources.lib.server_stats import fetch_all_stats, format_stats_text
+except Exception:
+    fetch_all_stats = None
+    format_stats_text = None
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -564,6 +570,10 @@ def show_main_menu():
     li_history.setArt({'icon': icon})
     xbmcplugin.addDirectoryItem(handle, f"{sys.argv[0]}?action=show_history", li_history, True)
 
+    li_stats = xbmcgui.ListItem(label='Server Stats')
+    li_stats.setArt({'icon': icon})
+    xbmcplugin.addDirectoryItem(handle, f"{sys.argv[0]}?action=show_server_stats", li_stats, False)
+
     li_settings = xbmcgui.ListItem(label='Settings')
     li_settings.setArt({'icon': icon})
     xbmcplugin.addDirectoryItem(handle, f"{sys.argv[0]}?action=open_settings", li_settings, False)
@@ -573,6 +583,53 @@ def show_main_menu():
 
 def open_settings():
     xbmc.executebuiltin('Addon.OpenSettings(plugin.video.sourceenginepro)')
+
+
+def show_server_stats():
+    """Fetch live stats from all configured servers and display in a text viewer."""
+    if fetch_all_stats is None or format_stats_text is None:
+        xbmcgui.Dialog().notification(
+            'Source Engine Pro', 'Server stats module not available.',
+            xbmcgui.NOTIFICATION_ERROR, 3000)
+        return
+
+    addon = xbmcaddon.Addon()
+    progress = xbmcgui.DialogProgress()
+    progress.create('Source Engine Pro', 'Fetching server stats...')
+
+    sections = []
+    servers = []
+
+    # Collect configured servers (primary + backup)
+    for prefix, name in [('emby', 'Emby'), ('jelly', 'Jellyfin')]:
+        url = addon.getSetting(f'{prefix}_url').strip()
+        token = addon.getSetting(f'{prefix}_token').strip()
+        if url and token:
+            servers.append((prefix, name, url, token))
+        # Check backup
+        url2 = addon.getSetting(f'{prefix}2_url').strip()
+        token2 = addon.getSetting(f'{prefix}2_token').strip()
+        if url2 and token2:
+            servers.append((f'{prefix}2', f'{name} Backup', url2, token2))
+
+    if not servers:
+        xbmcgui.Dialog().ok('Source Engine Pro',
+                            'No servers configured. Go to Settings and add your Emby/Jellyfin server details.')
+        return
+
+    for i, (prefix, label, url, token) in enumerate(servers):
+        pct = int((i / len(servers)) * 100)
+        progress.update(pct, f'Fetching stats from {label}...')
+        if progress.iscanceled():
+            return
+        stats = fetch_all_stats(url, token)
+        sections.append(format_stats_text(stats, label))
+
+    progress.close()
+
+    full_text = "\n\n".join(sections)
+    xbmcgui.Dialog().textviewer('Source Engine Pro — Server Stats', full_text)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2369,6 +2426,8 @@ if __name__ == '__main__':
         test_jelly2_token()
     elif action == 'open_settings':
         open_settings()
+    elif action == 'show_server_stats':
+        show_server_stats()
     elif not params:
         show_main_menu()
     else:
