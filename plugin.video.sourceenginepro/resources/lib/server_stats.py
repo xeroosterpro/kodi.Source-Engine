@@ -41,11 +41,16 @@ def fetch_sessions(url, token):
     """Fetch active sessions from GET /Sessions.
 
     Returns dict with total_streams, transcoding, direct_play, active_users,
-    user_names, and raw session details — or None on failure.
+    user_names, and raw session details. Returns {'permission_denied': True}
+    when the server requires an admin token.
     """
     try:
         r = requests.get(f"{url}/Sessions", headers=_make_headers(token), timeout=8, verify=False)
+        xbmc.log(f"Source Engine Pro [STATS]: /Sessions status {r.status_code} for {url}", xbmc.LOGDEBUG)
+        if r.status_code in (401, 403):
+            return {'permission_denied': True}
         if r.status_code != 200:
+            xbmc.log(f"Source Engine Pro [STATS]: /Sessions unexpected {r.status_code} for {url}", xbmc.LOGWARNING)
             return None
         sessions = r.json()
 
@@ -71,6 +76,7 @@ def fetch_sessions(url, token):
             'active_users': len(user_names),
             'user_names': sorted(user_names),
             'sessions': active_streams,
+            'permission_denied': False,
         }
     except Exception as e:
         xbmc.log(f"Source Engine Pro [STATS]: Sessions fetch failed for {url} - {e}", xbmc.LOGWARNING)
@@ -78,33 +84,56 @@ def fetch_sessions(url, token):
 
 
 def fetch_system_info(url, token):
-    """Fetch server name, version and OS from GET /System/Info."""
+    """Fetch server name, version and OS.
+
+    Tries GET /System/Info (admin required on Jellyfin).
+    Falls back to GET /System/Info/Public (no auth needed, limited info).
+    """
     try:
+        # Try full info first (admin token or Emby)
         r = requests.get(f"{url}/System/Info", headers=_make_headers(token), timeout=8, verify=False)
-        if r.status_code != 200:
-            return None
-        d = r.json()
-        return {
-            'server_name': d.get('ServerName', 'Unknown'),
-            'version': d.get('Version', '?'),
-            'os': d.get('OperatingSystemDisplayName', '?'),
-        }
+        xbmc.log(f"Source Engine Pro [STATS]: /System/Info status {r.status_code} for {url}", xbmc.LOGDEBUG)
+        if r.status_code == 200:
+            d = r.json()
+            return {
+                'server_name': d.get('ServerName', 'Unknown'),
+                'version': d.get('Version', '?'),
+                'os': d.get('OperatingSystemDisplayName') or d.get('OperatingSystem', '?'),
+                'admin_access': True,
+            }
+
+        # Fall back to public endpoint (no auth required, available on both Emby and Jellyfin)
+        xbmc.log(f"Source Engine Pro [STATS]: /System/Info returned {r.status_code}, trying /System/Info/Public", xbmc.LOGINFO)
+        rp = requests.get(f"{url}/System/Info/Public", timeout=8, verify=False)
+        if rp.status_code == 200:
+            d = rp.json()
+            return {
+                'server_name': d.get('ServerName', 'Unknown'),
+                'version': d.get('Version', '?'),
+                'os': d.get('OperatingSystemDisplayName') or d.get('OperatingSystem', '?'),
+                'admin_access': False,
+            }
     except Exception as e:
         xbmc.log(f"Source Engine Pro [STATS]: System/Info failed for {url} - {e}", xbmc.LOGWARNING)
-        return None
+    return None
 
 
 def fetch_library_counts(url, token):
     """Fetch movie / series / episode counts from GET /Items/Counts."""
     try:
         r = requests.get(f"{url}/Items/Counts", headers=_make_headers(token), timeout=8, verify=False)
+        xbmc.log(f"Source Engine Pro [STATS]: /Items/Counts status {r.status_code} for {url}", xbmc.LOGDEBUG)
+        if r.status_code in (401, 403):
+            return {'permission_denied': True}
         if r.status_code != 200:
+            xbmc.log(f"Source Engine Pro [STATS]: /Items/Counts unexpected {r.status_code} for {url}", xbmc.LOGWARNING)
             return None
         d = r.json()
         return {
             'movies': d.get('MovieCount', 0),
             'series': d.get('SeriesCount', 0),
             'episodes': d.get('EpisodeCount', 0),
+            'permission_denied': False,
         }
     except Exception as e:
         xbmc.log(f"Source Engine Pro [STATS]: Items/Counts failed for {url} - {e}", xbmc.LOGWARNING)
@@ -155,7 +184,14 @@ def format_stats_text(stats, server_label):
         lines.append("[COLOR cyan]  SERVER INFO[/COLOR]")
         lines.append(f"    Name:      {si['server_name']}")
         lines.append(f"    Version:   {si['version']}")
-        lines.append(f"    OS:        {si['os']}")
+        if si.get('os') and si['os'] != '?':
+            lines.append(f"    OS:        {si['os']}")
+        if not si.get('admin_access', True):
+            lines.append("    [COLOR gray](limited info — use admin token for full details)[/COLOR]")
+        lines.append("")
+    else:
+        lines.append("[COLOR cyan]  SERVER INFO[/COLOR]")
+        lines.append("    [COLOR gray]Could not fetch server info[/COLOR]")
         lines.append("")
 
     # Network / Latency
@@ -169,7 +205,10 @@ def format_stats_text(stats, server_label):
     # Active Streams
     sess = stats.get('sessions')
     lines.append("[COLOR cyan]  ACTIVE STREAMS[/COLOR]")
-    if sess:
+    if sess and sess.get('permission_denied'):
+        lines.append("    [COLOR yellow]Admin token required to view sessions[/COLOR]")
+        lines.append("")
+    elif sess:
         lines.append(f"    Total:         {sess['total_streams']}")
         lines.append(f"    Direct Play:   [COLOR lime]{sess['direct_play']}[/COLOR]")
         lines.append(f"    Transcoding:   [COLOR orange]{sess['transcoding']}[/COLOR]")
@@ -189,6 +228,9 @@ def format_stats_text(stats, server_label):
                 mc = 'lime' if method == 'DirectPlay' else 'orange'
                 lines.append(f"    {user} on {device}: [COLOR {mc}]{method}[/COLOR] - {title}")
             lines.append("")
+        elif sess['total_streams'] == 0:
+            lines.append("    [COLOR gray]No active streams[/COLOR]")
+            lines.append("")
     else:
         lines.append("    [COLOR gray]Could not fetch session data[/COLOR]")
         lines.append("")
@@ -196,7 +238,9 @@ def format_stats_text(stats, server_label):
     # Library
     lib = stats.get('library')
     lines.append("[COLOR cyan]  LIBRARY[/COLOR]")
-    if lib:
+    if lib and lib.get('permission_denied'):
+        lines.append("    [COLOR yellow]Admin token required to view library counts[/COLOR]")
+    elif lib:
         lines.append(f"    Movies:    {lib['movies']:,}")
         lines.append(f"    Series:    {lib['series']:,}")
         lines.append(f"    Episodes:  {lib['episodes']:,}")
