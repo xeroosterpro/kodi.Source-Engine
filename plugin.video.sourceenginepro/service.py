@@ -140,7 +140,8 @@ def _show_startup_status():
             on_backup = addon.getSetting(f'{prefix}_on_backup') == 'true'
             display_name = f"{name} (Backup)" if on_backup else name
             token = addon.getSetting(f'{prefix}2_token' if on_backup else f'{prefix}_token').strip()
-            parts.append(f"{display_name} {'[OK]' if token else '[FAIL]'}")
+            status = '[COLOR lime][OK][/COLOR]' if token else '[COLOR red][FAIL][/COLOR]'
+            parts.append(f"{display_name} {status}")
         if parts:
             xbmcgui.Dialog().notification(
                 "Source Engine Pro",
@@ -186,8 +187,8 @@ def _restore_primary(addon, prefix, name, url, user, pw, dialog):
     xbmc.log(f"Source Engine Pro [BACKUP]: {name} primary restored — switching back from backup.", xbmc.LOGINFO)
     dialog.notification(
         "Source Engine Pro",
-        f"{name} PRIMARY restored [OK]",
-        xbmcgui.NOTIFICATION_INFO, 5000
+        f"{name} back on [COLOR lime]PRIMARY[/COLOR]",
+        xbmcgui.NOTIFICATION_INFO, 4000
     )
 
 
@@ -280,8 +281,8 @@ def run_automation():
                                 _write_to_jellycon(clean_backup, backup_user)
                             dialog.notification(
                                 "Source Engine Pro",
-                                f"[BACKUP] {name} — Primary offline, using backup server",
-                                xbmcgui.NOTIFICATION_WARNING, 6000
+                                f"{name} [COLOR red]PRIMARY DOWN[/COLOR] — [COLOR yellow]Backup active[/COLOR]",
+                                xbmcgui.NOTIFICATION_WARNING, 5000
                             )
                             xbmc.log(f"Source Engine Pro [BACKUP]: Switched {name} to backup server {clean_backup}.", xbmc.LOGWARNING)
                         else:
@@ -298,19 +299,19 @@ def run_automation():
                     if backup_url and backup_user:
                         dialog.notification(
                             "Source Engine Pro",
-                            f"{name} PRIMARY + BACKUP both unreachable!",
+                            f"[COLOR red]{name} PRIMARY + BACKUP offline[/COLOR]",
                             xbmcgui.NOTIFICATION_ERROR, 5000
                         )
                     elif old_token:
                         dialog.notification(
                             "Source Engine Pro",
-                            f"{name} API Unreachable!",
+                            f"[COLOR orange]{name} unreachable[/COLOR]",
                             xbmcgui.NOTIFICATION_WARNING, 4000
                         )
                     else:
                         dialog.notification(
                             "Source Engine Pro",
-                            f"Failed to connect to {name}",
+                            f"[COLOR red]{name} — connection failed[/COLOR]",
                             xbmcgui.NOTIFICATION_ERROR, 4000
                         )
                     window.setProperty(f"SourceEngine_{prefix}_error", "true")

@@ -172,7 +172,7 @@ def retrieve_embycon_settings():
     except Exception:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'EmbyCon not installed or not found.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -187,7 +187,7 @@ def retrieve_embycon_settings():
     if not ipaddress:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'EmbyCon has no server address configured.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -251,7 +251,7 @@ def retrieve_jellycon_settings():
     except Exception:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'JellyCon not installed or not found.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -1937,7 +1937,7 @@ def retrieve_emby2_settings():
     except Exception:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'EmbyCon not installed or not found.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -1951,7 +1951,7 @@ def retrieve_emby2_settings():
     if not ipaddress:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'EmbyCon has no server address configured.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -1982,7 +1982,7 @@ def retrieve_jelly2_settings():
     except Exception:
         xbmcgui.Dialog().notification(
             'Source Engine Pro', 'JellyCon not installed or not found.',
-            xbmcgui.NOTIFICATION_WARNING, 3500
+            xbmcgui.NOTIFICATION_WARNING, 4000
         )
         return
 
@@ -1997,7 +1997,7 @@ def retrieve_jelly2_settings():
         if not ipaddress:
             xbmcgui.Dialog().notification(
                 'Source Engine Pro', 'JellyCon has no server address configured.',
-                xbmcgui.NOTIFICATION_WARNING, 3500
+                xbmcgui.NOTIFICATION_WARNING, 4000
             )
             return
         std_ports = {'https': '443', 'http': '80'}
@@ -2369,9 +2369,9 @@ def _ensure_tmdb_player_installed():
             xbmc.log('Source Engine Pro [PLAYER]: VERIFIED — player file exists at destination.', xbmc.LOGINFO)
             xbmcgui.Dialog().notification(
                 'Source Engine Pro',
-                'Player added! In TMDb Helper > Players, select "Source Engine Pro" as default.',
+                '[COLOR lime]TMDb Helper player installed + set as default[/COLOR]',
                 xbmcgui.NOTIFICATION_INFO,
-                8000,
+                4000,
             )
         else:
             xbmc.log('Source Engine Pro [PLAYER]: FAILED — file not found after write!', xbmc.LOGWARNING)
