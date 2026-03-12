@@ -50,31 +50,66 @@ def get_auth_token(url, user, password, server_type):
     return None, None
 
 
+def _write_addon_settings(addon_id, values, label):
+    """Write settings directly into another addon's settings.xml.
+    Cross-addon setSetting() does NOT persist to disk on Android/Shield,
+    so we bypass it and edit the XML file ourselves — same approach used
+    for TMDb Helper defaults.  `values` is a dict of {setting_id: value}."""
+    import xml.etree.ElementTree as ET
+    try:
+        data_dir = xbmcvfs.translatePath(
+            f'special://profile/addon_data/{addon_id}/'
+        )
+        settings_path = os.path.join(data_dir, 'settings.xml')
+
+        if os.path.isfile(settings_path):
+            try:
+                tree = ET.parse(settings_path)
+                root = tree.getroot()
+            except ET.ParseError as pe:
+                xbmc.log(f'Source Engine Pro [BACKUP]: {label} settings.xml parse error — {pe}', xbmc.LOGWARNING)
+                return
+        else:
+            os.makedirs(data_dir, exist_ok=True)
+            root = ET.Element('settings', version='2')
+            tree = ET.ElementTree(root)
+
+        for setting_id, value in values.items():
+            elem = next(
+                (el for el in root.findall('setting') if el.get('id') == setting_id),
+                None,
+            )
+            if elem is None:
+                elem = ET.SubElement(root, 'setting', id=setting_id)
+            elem.text = value
+
+        tree.write(settings_path, encoding='unicode', xml_declaration=False)
+        xbmc.log(f'Source Engine Pro [BACKUP]: {label} settings.xml updated on disk.', xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log(f'Source Engine Pro [BACKUP]: {label} settings write failed — {e}', xbmc.LOGWARNING)
+
+
 def _write_to_embycon(url, user, password):
-    """Point EmbyCon at a different server. Silently no-ops if EmbyCon is not installed."""
+    """Point EmbyCon at a different server. Uses direct XML write (Android-safe)."""
     try:
         parsed = urllib.parse.urlparse(url.rstrip('/'))
         protocol = '1' if parsed.scheme == 'https' else '0'
         host = parsed.hostname or ''
         port = str(parsed.port) if parsed.port else ('443' if parsed.scheme == 'https' else '80')
-        embycon = xbmcaddon.Addon('plugin.video.embycon')
-        embycon.setSetting('protocol', protocol)
-        embycon.setSetting('ipaddress', host)
-        embycon.setSetting('port', port)
-        embycon.setSetting('username', user)
+        values = {'protocol': protocol, 'ipaddress': host, 'port': port, 'username': user}
         if password:
-            embycon.setSetting('password', password)
+            values['password'] = password
+        _write_addon_settings('plugin.video.embycon', values, 'EmbyCon')
         xbmc.log(f"Source Engine Pro [BACKUP]: EmbyCon updated → {url}", xbmc.LOGINFO)
     except Exception as e:
         xbmc.log(f"Source Engine Pro [BACKUP]: EmbyCon update failed — {e}", xbmc.LOGWARNING)
 
 
 def _write_to_jellycon(url, user):
-    """Point JellyCon at a different server. Note: JellyCon does not store passwords."""
+    """Point JellyCon at a different server. Uses direct XML write (Android-safe)."""
     try:
-        jellycon = xbmcaddon.Addon('plugin.video.jellycon')
-        jellycon.setSetting('server_address', url.rstrip('/'))
-        jellycon.setSetting('username', user)
+        values = {'server_address': url.rstrip('/'), 'username': user}
+        _write_addon_settings('plugin.video.jellycon', values, 'JellyCon')
         xbmc.log(f"Source Engine Pro [BACKUP]: JellyCon updated → {url}", xbmc.LOGINFO)
     except Exception as e:
         xbmc.log(f"Source Engine Pro [BACKUP]: JellyCon update failed — {e}", xbmc.LOGWARNING)
