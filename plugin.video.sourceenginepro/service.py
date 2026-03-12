@@ -109,18 +109,19 @@ def _show_ping_status():
 
         parts = []
         for i, (name, ms) in enumerate(results):
+            short = name.replace(' (Backup)', ' BK')
             if ms < 0:
-                tag = f"{name}: [COLOR red]OFFLINE[/COLOR]"
+                tag = f"{short} [COLOR red]OFF[/COLOR]"
             else:
                 color = 'lime' if ms < 100 else 'yellow' if ms < 300 else 'orange'
-                winner_mark = ' [COLOR gold][BEST][/COLOR]' if i == 0 and len(results) > 1 else ''
-                tag = f"{name}: [COLOR {color}]{ms}ms[/COLOR]{winner_mark}"
+                winner_mark = '[COLOR gold]*[/COLOR]' if i == 0 and len(results) > 1 else ''
+                tag = f"{short} [COLOR {color}]{ms}ms[/COLOR]{winner_mark}"
             parts.append(tag)
 
         xbmcgui.Dialog().notification(
-            "Source Engine Pro — Ping",
-            "  |  ".join(parts),
-            xbmcgui.NOTIFICATION_INFO, 5000
+            "Ping",
+            "  ".join(parts),
+            xbmcgui.NOTIFICATION_INFO, 4000
         )
     except Exception as e:
         xbmc.log(f"Source Engine Pro [PING]: Notification failed — {e}", xbmc.LOGWARNING)
