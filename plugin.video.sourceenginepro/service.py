@@ -18,7 +18,7 @@ def check_token_health(url, token):
         r = requests.get(f"{url}/System/Info", headers=headers, timeout=5, verify=False)
         if r.status_code == 200:
             return True
-    except:
+    except Exception:
         pass
     return False
 

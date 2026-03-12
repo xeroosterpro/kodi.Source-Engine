@@ -33,9 +33,9 @@
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_emby2_settings)"
             option="close" help="Configure EmbyCon to point at your backup Emby server first, then press this to import those settings here."/>
         <setting id="emby2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Emby server (e.g., https://emby-backup.example.com). Leave blank to disable failover."/>
-        <setting id="emby2_user"     type="text"   label="Backup Username"        default=""/>
+        <setting id="emby2_user"     type="text"   label="Backup Username"        default="" help="Your backup Emby account username."/>
         <setting id="emby2_pass"     type="text"   label="Backup Password"        default="" option="hidden" help="Password for your backup Emby account."/>
-        <setting id="test_emby2"     type="action" label="⚡ Test Backup Connection"
+        <setting id="test_emby2"     type="action" label="Test Backup Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_emby2_token)"
             option="close" help="Pings the backup Emby server with its stored token."/>
         <setting id="emby2_token"        type="text"   label="Backup Internal Token"  default="" visible="false"/>
@@ -62,9 +62,9 @@
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=retrieve_jelly2_settings)"
             option="close" help="Configure JellyCon to point at your backup Jellyfin server first, then press this to import those settings here."/>
         <setting id="jelly2_url"      type="text"   label="Backup Server Address" default="" help="Full URL of your backup Jellyfin server (e.g., https://jellyfin-backup.example.com). Leave blank to disable failover."/>
-        <setting id="jelly2_user"     type="text"   label="Backup Username"        default=""/>
+        <setting id="jelly2_user"     type="text"   label="Backup Username"        default="" help="Your backup Jellyfin account username."/>
         <setting id="jelly2_pass"     type="text"   label="Backup Password"        default="" option="hidden" help="Password for your backup Jellyfin account. Note: JellyCon does not store passwords — only Source Engine Pro uses this for auto-login."/>
-        <setting id="test_jelly2"     type="action" label="⚡ Test Backup Connection"
+        <setting id="test_jelly2"     type="action" label="Test Backup Connection"
             action="RunPlugin(plugin://plugin.video.sourceenginepro/?action=test_jelly2_token)"
             option="close" help="Pings the backup Jellyfin server with its stored token."/>
         <setting id="jelly2_token"        type="text"   label="Backup Internal Token"  default="" visible="false"/>
