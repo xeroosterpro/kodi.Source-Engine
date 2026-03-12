@@ -617,18 +617,20 @@ def show_server_stats():
                             'No servers configured. Go to Settings and add your Emby/Jellyfin server details.')
         return
 
-    for i, (prefix, label, url, token) in enumerate(servers):
-        pct = int((i / len(servers)) * 100)
-        progress.update(pct, f'Fetching stats from {label}...')
-        if progress.iscanceled():
-            return
-        stats = fetch_all_stats(url, token)
-        sections.append(format_stats_text(stats, label))
+    try:
+        for i, (prefix, label, url, token) in enumerate(servers):
+            pct = int((i / len(servers)) * 100)
+            progress.update(pct, f'Fetching stats from {label}...')
+            if progress.iscanceled():
+                return
+            stats = fetch_all_stats(url, token)
+            sections.append(format_stats_text(stats, label))
+    finally:
+        progress.close()
 
-    progress.close()
-
-    full_text = "\n\n".join(sections)
-    xbmcgui.Dialog().textviewer('Source Engine Pro — Server Stats', full_text)
+    if sections:
+        full_text = "\n\n".join(sections)
+        xbmcgui.Dialog().textviewer('Source Engine Pro — Server Stats', full_text)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

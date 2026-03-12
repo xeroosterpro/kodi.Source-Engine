@@ -351,13 +351,20 @@ class PlaybackReporter(xbmc.Player):
                         self.server_url = f"{parsed.scheme}://{parsed.netloc}"
 
                         addon = xbmcaddon.Addon()
-                        emby_token = addon.getSetting('emby_token')
+                        emby_token  = addon.getSetting('emby_token')
                         emby2_token = addon.getSetting('emby2_token')
-                        if self.token == emby_token or self.token == emby2_token:
-                            self.uid = addon.getSetting('emby_uid') if self.token == emby_token else addon.getSetting('emby2_uid')
+                        jelly_token  = addon.getSetting('jelly_token')
+                        jelly2_token = addon.getSetting('jelly2_token')
+                        if self.token and self.token == emby_token:
+                            self.uid = addon.getSetting('emby_uid')
+                        elif self.token and self.token == emby2_token:
+                            self.uid = addon.getSetting('emby2_uid')
+                        elif self.token and self.token == jelly_token:
+                            self.uid = addon.getSetting('jelly_uid')
+                        elif self.token and self.token == jelly2_token:
+                            self.uid = addon.getSetting('jelly2_uid')
                         else:
-                            jelly_token = addon.getSetting('jelly_token')
-                            self.uid = addon.getSetting('jelly_uid') if self.token == jelly_token else addon.getSetting('jelly2_uid')
+                            self.uid = ''
 
                         if self.server_url and self.item_id and self.token:
                             self.play_session_id = str(uuid.uuid4()).replace('-', '')
