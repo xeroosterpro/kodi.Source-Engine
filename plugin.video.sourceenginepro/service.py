@@ -407,7 +407,7 @@ class PlaybackReporter(xbmc.Player):
         headers = {'X-Emby-Token': self.token}
         try:
             requests.post(url, json=payload, headers=headers, verify=False, timeout=5)
-        except:
+        except Exception:
             pass
 
     def report_progress(self):
@@ -424,7 +424,7 @@ class PlaybackReporter(xbmc.Player):
             }
             headers = {'X-Emby-Token': self.token}
             requests.post(url, json=payload, headers=headers, verify=False, timeout=5)
-        except:
+        except Exception:
             pass
 
         if self.is_playing and not xbmc.Monitor().abortRequested():
@@ -444,7 +444,7 @@ class PlaybackReporter(xbmc.Player):
         headers = {'X-Emby-Token': self.token}
         try:
             requests.post(url, json=payload, headers=headers, verify=False, timeout=5)
-        except:
+        except Exception:
             pass
 
 def _set_tmdb_helper_defaults():

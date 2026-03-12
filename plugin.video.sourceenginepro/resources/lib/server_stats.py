@@ -256,18 +256,18 @@ def format_startup_summary(stats, server_label):
 
     si = stats.get('system')
     if si:
-        parts.append(f"v{si['version']}")
+        parts.append(f"v{si.get('version', '?')}")
 
     ping = stats.get('ping_ms', -1)
     if ping >= 0:
         parts.append(f"{ping}ms")
 
     sess = stats.get('sessions')
-    if sess:
+    if sess and not sess.get('permission_denied'):
         parts.append(f"{sess['total_streams']} streams")
 
     lib = stats.get('library')
-    if lib:
-        parts.append(f"{lib['movies']:,} movies")
+    if lib and not lib.get('permission_denied'):
+        parts.append(f"{lib.get('movies', 0):,} movies")
 
     return "  |  ".join(parts)

@@ -2383,7 +2383,7 @@ if __name__ == '__main__':
     _ensure_tmdb_player_installed()
 
     params = (
-        dict(urllib.parse.parse_qsl(sys.argv[2][1:]))
+        dict(urllib.parse.parse_qsl(sys.argv[2].lstrip('?')))
         if len(sys.argv) > 2 and sys.argv[2]
         else {}
     )
