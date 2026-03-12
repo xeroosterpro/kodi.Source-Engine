@@ -363,6 +363,7 @@ class PlaybackReporter(xbmc.Player):
                             self.is_paused = False
                             self.report_playback_started()
                             self.timer = threading.Timer(30, self.report_progress)
+                            self.timer.daemon = True
                             self.timer.start()
             except Exception as e:
                 xbmc.log(f"Source Engine Pro: Playback Reporter safely ignored non-plugin file. ({str(e)})", xbmc.LOGINFO)
@@ -424,8 +425,9 @@ class PlaybackReporter(xbmc.Player):
         except:
             pass
 
-        if self.is_playing:
+        if self.is_playing and not xbmc.Monitor().abortRequested():
             self.timer = threading.Timer(30, self.report_progress)
+            self.timer.daemon = True
             self.timer.start()
 
     def report_playback_stopped(self):
@@ -571,3 +573,8 @@ if __name__ == '__main__':
         _loop_count += 1
         if _loop_count % 12 == 0:
             _show_ping_status()
+
+    # Clean up: cancel any in-flight playback progress timer so threads don't
+    # block Python from exiting (would cause Kodi's 5-second kill timeout).
+    if reporter.timer:
+        reporter.timer.cancel()
