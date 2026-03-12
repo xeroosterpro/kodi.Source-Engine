@@ -113,7 +113,7 @@ def _show_ping_status():
                 tag = f"{name}: [COLOR red]OFFLINE[/COLOR]"
             else:
                 color = 'lime' if ms < 100 else 'yellow' if ms < 300 else 'orange'
-                winner_mark = ' [COLOR gold]★[/COLOR]' if i == 0 and len(results) > 1 else ''
+                winner_mark = ' [COLOR gold][BEST][/COLOR]' if i == 0 and len(results) > 1 else ''
                 tag = f"{name}: [COLOR {color}]{ms}ms[/COLOR]{winner_mark}"
             parts.append(tag)
 
