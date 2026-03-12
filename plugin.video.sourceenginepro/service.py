@@ -4,9 +4,10 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 try:
-    from resources.lib.server_stats import fetch_all_stats, format_startup_summary
+    from resources.lib.server_stats import fetch_all_stats, fetch_ping_latency, format_startup_summary
 except Exception:
     fetch_all_stats = None
+    fetch_ping_latency = None
     format_startup_summary = None
 
 def check_token_health(url, token):
@@ -77,6 +78,52 @@ def _write_to_jellycon(url, user):
         xbmc.log(f"Source Engine Pro [BACKUP]: JellyCon updated → {url}", xbmc.LOGINFO)
     except Exception as e:
         xbmc.log(f"Source Engine Pro [BACKUP]: JellyCon update failed — {e}", xbmc.LOGWARNING)
+
+
+def _show_ping_status():
+    """Ping all configured servers and show a single comparison toast.
+    Called on startup and every hour so the user can track server latency.
+    """
+    if fetch_all_stats is None:
+        return
+    try:
+        addon = xbmcaddon.Addon()
+        results = []  # list of (name, ping_ms)
+
+        for prefix, name in [('emby', 'Emby'), ('jelly', 'Jellyfin')]:
+            url = addon.getSetting(f'{prefix}_url').strip()
+            token = addon.getSetting(f'{prefix}_token').strip()
+            if not url:
+                continue
+            on_backup = addon.getSetting(f'{prefix}_on_backup') == 'true'
+            display = f"{name} (Backup)" if on_backup else name
+            active_token = addon.getSetting(f'{prefix}2_token' if on_backup else f'{prefix}_token').strip()
+            ping = fetch_ping_latency(url.rstrip('/'), active_token or None)
+            results.append((display, ping))
+
+        if not results:
+            return
+
+        # Sort so fastest is first (offline = -1 goes last)
+        results.sort(key=lambda x: x[1] if x[1] >= 0 else 99999)
+
+        parts = []
+        for i, (name, ms) in enumerate(results):
+            if ms < 0:
+                tag = f"{name}: [COLOR red]OFFLINE[/COLOR]"
+            else:
+                color = 'lime' if ms < 100 else 'yellow' if ms < 300 else 'orange'
+                winner_mark = ' [COLOR gold]★[/COLOR]' if i == 0 and len(results) > 1 else ''
+                tag = f"{name}: [COLOR {color}]{ms}ms[/COLOR]{winner_mark}"
+            parts.append(tag)
+
+        xbmcgui.Dialog().notification(
+            "Source Engine Pro — Ping",
+            "  |  ".join(parts),
+            xbmcgui.NOTIFICATION_INFO, 5000
+        )
+    except Exception as e:
+        xbmc.log(f"Source Engine Pro [PING]: Notification failed — {e}", xbmc.LOGWARNING)
 
 
 def _show_startup_status():
@@ -512,8 +559,15 @@ if __name__ == '__main__':
     if not monitor.abortRequested():
         run_automation()
         _show_startup_status()
+        xbmc.sleep(1000)
+        _show_ping_status()
 
+    # Main loop runs every 5 min; ping toast fires every 12 iterations (1 hour).
+    _loop_count = 0
     while not monitor.abortRequested():
         if monitor.waitForAbort(300):
             break
         run_automation()
+        _loop_count += 1
+        if _loop_count % 12 == 0:
+            _show_ping_status()
