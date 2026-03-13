@@ -19,29 +19,41 @@ jobs:
       - name: Build addon zip
         run: |
           ADDON_ID="plugin.video.sourceenginepro"
-          VERSION=$(grep -oP '(?<=version=")[^"]+' ${ADDON_ID}/addon.xml | head -1)
+          VERSION=$(grep -oP '<addon\b[^>]*version="\K[^"]+' ${ADDON_ID}/addon.xml | head -1)
           ZIP_NAME="${ADDON_ID}-${VERSION}.zip"
+          echo "Building version ${VERSION} -> ${ZIP_NAME}"
+
           rm -f ${ADDON_ID}/*.zip
-          cd ${ADDON_ID} && zip -r ${ZIP_NAME} . --exclude "index.html" --exclude "*.zip" && cd ..
+
+          cd ${ADDON_ID}
+          zip -r ${ZIP_NAME} . --exclude "index.html" --exclude "*.zip"
+          cd ..
+
           echo "Created ${ADDON_ID}/${ZIP_NAME}"
 
       - name: Generate addons.xml and md5
         run: |
           python3 - <<'PYEOF'
           import os, hashlib, xml.etree.ElementTree as ET
+
           addons_root = ET.Element("addons")
+
           for d in sorted(os.listdir(".")):
               addon_xml = os.path.join(d, "addon.xml")
               if os.path.isfile(addon_xml) and os.path.isdir(d):
                   tree = ET.parse(addon_xml)
                   addons_root.append(tree.getroot())
+
           ET.indent(addons_root, space="    ")
           content = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(addons_root, encoding="unicode") + "\n"
+
           with open("addons.xml", "w", encoding="utf-8") as f:
               f.write(content)
+
           md5 = hashlib.md5(content.encode("utf-8")).hexdigest()
           with open("addons.xml.md5", "w") as f:
               f.write(md5)
+
           print(f"addons.xml written, md5={md5}")
           PYEOF
 
