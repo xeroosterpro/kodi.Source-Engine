@@ -12,7 +12,7 @@
     </extension>
     <extension point="xbmc.service" library="service.py" start="startup"/>
     
-    <extension point="kodi.addon.metadata">
+    <extension point="xbmc.addon.metadata">
         <summary>Automated Emby/Jellyfin Quality Picker</summary>
         <description>Source Engine Pro automatically logs in and picks the highest fidelity media source available across your private servers.</description>
         <platform>all</platform>
