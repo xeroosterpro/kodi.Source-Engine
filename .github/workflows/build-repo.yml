@@ -25,11 +25,14 @@ jobs:
 
           rm -f ${ADDON_ID}/*.zip
 
-          cd ${ADDON_ID}
-          zip -r ${ZIP_NAME} . --exclude "index.html" --exclude "*.zip"
-          cd ..
+          # Zip from the parent directory so the top-level folder inside the zip
+          # is plugin.video.sourceenginepro/ (required by Kodi)
+          zip -r ${ADDON_ID}/${ZIP_NAME} ${ADDON_ID}/ \
+            --exclude "${ADDON_ID}/index.html" \
+            --exclude "${ADDON_ID}/*.zip"
 
           echo "Created ${ADDON_ID}/${ZIP_NAME}"
+          unzip -l ${ADDON_ID}/${ZIP_NAME} | head -5
 
       - name: Generate addons.xml and md5
         run: |
