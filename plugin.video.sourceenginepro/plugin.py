@@ -774,6 +774,23 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
     max_res_index = get_int(addon, 'max_resolution', 0)
     deep_dive = addon.getSetting('deep_dive') == 'true'
 
+    audio_mode = get_int(addon, 'audio_mode', 0)  # 0=preset, 1=custom
+    audio_require = get_int(addon, 'audio_require', 0)
+
+    def _audio_bonus(key, default):
+        try:
+            return float(addon.getSetting(key).replace(',', '.') or default)
+        except Exception:
+            return float(default)
+
+    bonus_atmos         = _audio_bonus('bonus_atmos', 300)
+    bonus_dtsx          = _audio_bonus('bonus_dtsx', 250)
+    bonus_truehd        = _audio_bonus('bonus_truehd', 200)
+    bonus_dtshd         = _audio_bonus('bonus_dtshd', 175)
+    bonus_lossless_other = _audio_bonus('bonus_lossless_other', 100)
+    bonus_surround      = _audio_bonus('bonus_surround', 50)
+    bonus_stereo_penalty = _audio_bonus('bonus_stereo_penalty', 0)
+
     max_res = [float('inf'), 1080, 720][max_res_index] if 0 <= max_res_index <= 2 else float('inf')
 
     try:
@@ -1802,42 +1819,82 @@ def get_best_source(tmdb_id, imdb_id, tvdb_id, media_type, query, target_year=No
                     )
                     is_surround = audio_channels >= 5
 
+                    # -------------------------------------------------------
+                    # BASE SCORING — preset handles video/bitrate factors.
+                    # Audio bonuses from the preset are tracked separately so
+                    # Custom Scoring mode can replace them cleanly.
+                    # -------------------------------------------------------
                     score = 0
-                    if master_preset == 0:
+                    preset_audio_bonus = 0
+
+                    if master_preset == 0:      # Auto Max
                         score = bitrate_mbps
                         if is_4k: score += 50
                         if has_dv: score += 20
                         elif has_hdr: score += 10
-                        if is_atmos_dtsx or is_lossless: score += 20
-                        if is_surround: score += 5
-                    elif master_preset == 1:
+                        if is_atmos_dtsx or is_lossless: preset_audio_bonus += 20
+                        if is_surround: preset_audio_bonus += 5
+                    elif master_preset == 1:    # Audiophile
                         score = bitrate_mbps
-                        if is_atmos_dtsx: score += 300
-                        elif is_lossless: score += 200
-                        if is_surround: score += 50
                         if is_4k: score += 10
-                    elif master_preset == 2:
+                        if is_atmos_dtsx: preset_audio_bonus += 300
+                        elif is_lossless: preset_audio_bonus += 200
+                        if is_surround: preset_audio_bonus += 50
+                    elif master_preset == 2:    # 4K Focus
                         score = bitrate_mbps
                         if is_4k: score += 300
                         if is_1080p: score += 100
                         if has_dv: score += 50
                         elif has_hdr: score += 25
-                        if is_atmos_dtsx or is_lossless: score += 10
-                    elif master_preset == 3:
+                        if is_atmos_dtsx or is_lossless: preset_audio_bonus += 10
+                    elif master_preset == 3:    # Remux Focus
                         score = (size_gb * 3) + (bitrate_mbps * 2)
                         if is_4k: score += 50
-                    elif master_preset == 4:
+                    elif master_preset == 4:    # 1080p Focus
                         score = bitrate_mbps
                         if is_1080p: score += 300
                         if is_4k: score -= 500
-                        if is_atmos_dtsx or is_lossless: score += 20
-                    elif master_preset == 5:
-                        # Light Mode — slow connection / low-end device
-                        # Lower bitrate wins; 1080p is the sweet spot; 4K is strongly penalised.
-                        # No bonuses for lossless or surround — keep it light.
+                        if is_atmos_dtsx or is_lossless: preset_audio_bonus += 20
+                    elif master_preset == 5:    # Light Mode
                         score = max(0.0, 40.0 - bitrate_mbps)
                         if is_1080p: score += 30
                         if is_4k:    score -= 80
+
+                    # -------------------------------------------------------
+                    # AUDIO SCORING — custom mode overrides preset audio logic
+                    # -------------------------------------------------------
+                    if audio_mode == 1:
+                        # Custom per-format bonuses (mutually exclusive codec tiers)
+                        custom_audio = 0.0
+                        if 'atmos' in a_title:
+                            custom_audio += bonus_atmos
+                        elif is_atmos_dtsx:
+                            custom_audio += bonus_dtsx
+                        elif 'truehd' in a_codec or 'truehd' in a_title:
+                            custom_audio += bonus_truehd
+                        elif ('dtshd' in a_codec or a_profile in ('ma', 'hra')
+                              or 'dts-hd' in a_title or 'dts-hd' in a_codec):
+                            custom_audio += bonus_dtshd
+                        elif a_codec in ('flac', 'pcm_bluray', 'pcm') or 'pcm' in a_codec:
+                            custom_audio += bonus_lossless_other
+
+                        if is_surround:
+                            custom_audio += bonus_surround
+                        elif audio_channels <= 2:
+                            custom_audio -= bonus_stereo_penalty
+
+                        score += custom_audio
+
+                        # Hard requirement filter (buries non-qualifying streams)
+                        if audio_require == 1 and not is_atmos_dtsx:
+                            score = -9999.0
+                        elif audio_require == 2 and not is_lossless:
+                            score = -9999.0
+                        elif audio_require == 3 and not is_surround:
+                            score = -9999.0
+                    else:
+                        score += preset_audio_bonus
+
                     final_score = score * match_multiplier
 
                     resolution = f"{width if width > 0 else '??'}x{height}"

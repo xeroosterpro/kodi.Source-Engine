@@ -73,6 +73,39 @@
         <setting id="jelly_prefer_backup" type="bool"  label="Prefer Backup Server"   default="false" help="When enabled, always uses the backup Jellyfin server instead of the primary, even if the primary is reachable."/>
     </category>
 
+    <category label="Audio">
+
+        <setting id="audio_mode" type="select" label="Audio Scoring Mode"
+            values="Preset Controlled|Custom Scoring"
+            default="0"
+            help="Preset Controlled: audio bonuses are handled automatically by your chosen Profile Preset. Custom Scoring: you define exact score bonuses for each audio format — overrides the preset's audio logic entirely."/>
+
+        <setting type="sep"/>
+
+        <setting id="bonus_atmos" type="text" label="  Atmos Score Bonus" default="300"
+            help="Score bonus added when a stream has Dolby Atmos. Higher = more likely to win. Only used in Custom Scoring mode. Default: 300."/>
+        <setting id="bonus_dtsx" type="text" label="  DTS:X Score Bonus" default="250"
+            help="Score bonus added when a stream has DTS:X spatial audio. Default: 250."/>
+        <setting id="bonus_truehd" type="text" label="  TrueHD Score Bonus" default="200"
+            help="Score bonus added when a stream has Dolby TrueHD lossless audio. Default: 200."/>
+        <setting id="bonus_dtshd" type="text" label="  DTS-HD MA Score Bonus" default="175"
+            help="Score bonus added when a stream has DTS-HD Master Audio lossless. Default: 175."/>
+        <setting id="bonus_lossless_other" type="text" label="  FLAC / PCM Score Bonus" default="100"
+            help="Score bonus added when a stream has FLAC or uncompressed PCM audio. Default: 100."/>
+        <setting id="bonus_surround" type="text" label="  Surround 5.1+ Score Bonus" default="50"
+            help="Score bonus added when a stream has 5 or more audio channels. Stacks on top of codec bonuses. Default: 50."/>
+        <setting id="bonus_stereo_penalty" type="text" label="  Stereo Penalty (subtracted)" default="0"
+            help="Score points subtracted when a stream has only 2 channels (stereo or mono). Useful if you always want surround. Default: 0 (no penalty)."/>
+
+        <setting type="sep"/>
+
+        <setting id="audio_require" type="select" label="  Audio Requirement Filter"
+            values="No Requirement|Require Spatial (Atmos / DTS:X)|Require Lossless|Require Surround (5.1+)"
+            default="0"
+            help="Hard filter: streams that don't meet this audio standard are buried (score set to -9999) and will only play if nothing else qualifies. Only active in Custom Scoring mode."/>
+
+    </category>
+
     <category label="Limits">
         <setting id="max_resolution" type="select" label="Max Resolution Limit"              values="No Limit (4K+)|1080p Limit|720p Limit" default="0" help="Prevents picking files above this resolution. Great for slow internet or older TVs."/>
         <setting id="max_size_gb"    type="text"   label="Max File Size (GB) [0 = No Limit]" default="0"  help="Filters out files larger than this size in GB. Leave 0 for no limit."/>
