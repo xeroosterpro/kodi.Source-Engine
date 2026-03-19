@@ -13,6 +13,8 @@ Source Engine Pro is a Kodi addon that automatically selects the highest-fidelit
 - **13-signal confidence funnel** — provider ID matching, S/E numbers, episode names, runtime, file path, year proximity, and more — ensures the right episode is always selected, not just a name-match
 - **Full scoring pipeline** — bitrate, file size, resolution (4K/HDR/DV), audio (Atmos/TrueHD/DTS-HD MA) all scored simultaneously
 - **6 profile presets** — Auto Max, Audiophile, 4K Focus, Remux Focus, 1080p Focus, Light Mode
+- **Audio scoring modes** — Preset Controlled (automatic per-preset bonuses) or Custom Scoring (define exact bonuses per format: Atmos, DTS:X, TrueHD, DTS-HD MA, FLAC/PCM, surround, stereo penalty)
+- **Audio requirement filter** — hard-filter streams by audio standard (Spatial, Lossless, Surround 5.1+) in Custom Scoring mode
 - **Deep Dive mode** — wider API searches, relaxed name matching, lower confidence thresholds for edge-case library setups
 - **Head-to-head comparison** — both servers are searched in parallel; the winner is chosen by score; tie-breaker is configurable
 - **Playback reporting** — reports play start, progress, and watched status back to Emby and Jellyfin
@@ -29,7 +31,8 @@ Source Engine Pro is a Kodi addon that automatically selects the highest-fidelit
 ### Notifications
 - Color-coded status toasts — green `[OK]` / red `[FAIL]` on startup, orange for warnings, red for errors
 - Backup failover alerts — instant notification when primary goes down or comes back
-- Consistent 4-second display time throughout
+- **Individual notification toggles** — enable or disable startup health, ping status, and failover notifications independently in Settings → Notifications
+- Consistent display time throughout
 
 ---
 
@@ -43,7 +46,7 @@ Source Engine Pro is a Kodi addon that automatically selects the highest-fidelit
 
 ### Manual
 
-1. Download `plugin.video.sourceenginepro-1.1.5.zip` from the `plugin.video.sourceenginepro/` folder
+1. Download `plugin.video.sourceenginepro-1.1.7.zip` from the `plugin.video.sourceenginepro/` folder
 2. In Kodi: **Settings → Add-ons → Install from zip file** → select the zip
 
 ---
@@ -59,6 +62,44 @@ Source Engine Pro is a Kodi addon that automatically selects the highest-fidelit
 
 ---
 
+## Audio Scoring
+
+Source Engine Pro has two audio scoring modes selectable in **Settings → Audio**:
+
+| Mode | Behaviour |
+|---|---|
+| **Preset Controlled** | Audio bonuses are applied automatically based on your chosen Profile Preset. No configuration needed. |
+| **Custom Scoring** | You define exact score bonuses for each audio format. Overrides the preset's audio logic entirely. |
+
+### Custom Scoring bonuses (defaults)
+
+| Format | Default Bonus |
+|---|---|
+| Dolby Atmos | +300 |
+| DTS:X | +250 |
+| TrueHD | +200 |
+| DTS-HD MA | +175 |
+| FLAC / PCM | +100 |
+| Surround 5.1+ | +50 (stacks) |
+| Stereo penalty | 0 (subtracted) |
+
+An **Audio Requirement Filter** is also available in Custom Scoring mode — streams that don't meet the requirement are buried (score set to -9999) and only play if nothing else qualifies.
+
+---
+
+## Profile Presets
+
+| Preset | Primary driver | Audio bonus |
+|---|---|---|
+| **Auto Max** | Bitrate + 4K/HDR bonus | +20 lossless/Atmos, +5 surround |
+| **Audiophile** | Bitrate | +300 Atmos/DTS:X, +200 lossless, +50 surround |
+| **4K Focus** | Bitrate + 4K/HDR heavy bonus | +10 lossless/Atmos |
+| **Remux Focus** | File size + bitrate | None (size is the signal) |
+| **1080p Focus** | Bitrate + 1080p bonus, 4K penalised | +20 lossless/Atmos |
+| **Light Mode** | Inverse bitrate (lowest wins) | None (small/slow-connection mode) |
+
+---
+
 ## Requirements
 
 - Kodi 21 (Omega) or later
@@ -71,6 +112,8 @@ Source Engine Pro is a Kodi addon that automatically selects the highest-fidelit
 
 | Version | Highlights |
 |---|---|
+| **1.1.7** | Notification toggles (startup health, ping status, failover on/off independently); scoring & preset logic audit confirmed clean |
+| **1.1.6** | Backup server failover notification toggles groundwork; version bump infrastructure |
 | **1.1.5** | Server Stats live dashboard, hourly ping monitor, color-coded notifications, Android/Shield backup failover fix (EmbyCon/JellyCon XML write), logic audit fixes, debug audit fixes |
 | **1.1.4** | Server Stats module, startup stats toast, `show_server_stats()` menu item |
 | **1.1.3** | Shield/Android fixes: `xbmcvfs.translatePath()` (Kodi 21 compat), TMDb Helper player auto-install via `xbmcvfs.File()`, `special://profile/` path fix, handle=-1 playback fix |
