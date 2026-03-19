@@ -2118,6 +2118,7 @@ def play_video():
 
     addon = xbmcaddon.Addon()
     master_preset = get_int(addon, 'master_preset', 0)
+    audio_mode    = get_int(addon, 'audio_mode', 0)
 
     preset_names = [
         "Auto Max", "Audiophile", "4K Focus",
@@ -2145,9 +2146,11 @@ def play_video():
             xbmc.LOGINFO
         )
 
-        tie_breaker   = get_int(addon, 'tie_breaker', 0)
-        notify_colors = get_int(addon, 'notify_colors', 0)
-        single_server = addon.getSetting('single_server') == 'true'
+        tie_breaker      = get_int(addon, 'tie_breaker', 0)
+        notify_colors    = get_int(addon, 'notify_colors', 0)
+        notify_playback  = addon.getSetting('notify_playback')  != 'false'
+        notify_no_match  = addon.getSetting('notify_no_match')  != 'false'
+        single_server    = addon.getSetting('single_server') == 'true'
 
         other_server = "Jellyfin" if best['server'] == "Emby" else "Emby"
         best_other = next((x for x in all_results if x['server'] == other_server), None)
@@ -2226,7 +2229,20 @@ def play_video():
                 title = f"{best['server']} WINNER {win_score}pt{confidence} | {best_other['server']} {lose_score}pt"
 
             reason = "Higher Score"
-            if master_preset == 0:
+            if audio_mode == 1:
+                # Custom Scoring — show which audio format clinched it
+                _ba = best['audio']
+                _oa = best_other['audio']
+                _audio_keywords = ['Atmos', 'DTS:X', 'TrueHD', 'DTS-HD MA', 'FLAC', 'PCM']
+                _best_fmt  = next((k for k in _audio_keywords if k in _ba), None)
+                _other_fmt = next((k for k in _audio_keywords if k in _oa), None)
+                if _best_fmt and _best_fmt != _other_fmt:
+                    reason = f"Custom Audio ({_best_fmt})"
+                elif best['bitrate_mb'] > best_other['bitrate_mb']:
+                    reason = "Highest Bitrate"
+                else:
+                    reason = "Custom Scoring"
+            elif master_preset == 0:
                 if (('3840' in best['resolution'] or '2160' in best['resolution'])
                         and not ('3840' in best_other['resolution']
                                  or '2160' in best_other['resolution'])):
@@ -2321,7 +2337,8 @@ def play_video():
             xbmc.log(f"Source Engine Pro [HISTORY]: {_he}", xbmc.LOGWARNING)
         # ─────────────────────────────────────────────────────────── #
 
-        notify(title, msg, 7500)
+        if notify_playback:
+            notify(title, msg, 7500)
 
         stream_url = (
             f"{best['url']}/Videos/{best['id']}/stream.{best['cont']}"
@@ -2380,7 +2397,8 @@ def play_video():
         else:
             searched = [s for s in ['Emby', 'Jellyfin'] if s not in failed]
             server_str = ' & '.join(searched) if searched else 'servers'
-            notify("Source Engine Pro", f'"{query}" — not found on {server_str}', 4000)
+            if notify_no_match:
+                notify("Source Engine Pro", f'"{query}" — not found on {server_str}', 4000)
         _handle = int(sys.argv[1])
         if _handle >= 0:
             xbmcplugin.setResolvedUrl(_handle, False, listitem=xbmcgui.ListItem())
